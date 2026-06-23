@@ -2,6 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "npm install",
-  "buildCommand": "npm --workspace @lotion/web run build",
-  "devCommand": "npm --workspace @lotion/web run dev"
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev"
 }

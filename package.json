@@ -5,9 +5,9 @@
   "description": "AI-assisted Lottie feasibility and motion planning for Figma assets.",
   "packageManager": "npm@10.9.0",
   "scripts": {
-    "dev": "npm --workspace @lotion/web run dev",
-    "build": "npm run build --workspaces",
-    "typecheck": "npm run typecheck --workspaces"
+    "dev": "next dev",
+    "build": "next build",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "workspaces": [
     "apps/*",
@@ -16,7 +16,16 @@
   "engines": {
     "node": ">=20"
   },
+  "dependencies": {
+    "@lotion/shared": "file:packages/shared",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
   "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "typescript": "^5.5.0"
   }
 }

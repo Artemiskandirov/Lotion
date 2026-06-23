@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import type { AssetRequest, FeasibilityReport, AnimationPlan, LottieDocument } from "@lotion/shared";
-import "./styles.css";
 
 const sampleAsset: AssetRequest = {
   asset: {

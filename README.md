@@ -29,13 +29,13 @@ apps/
     manifest.json
     src/code.ts
     src/ui.tsx
-  web/
-    app/api/analyze-asset/
-    app/api/feasibility-check/
-    app/api/suggest-motions/
-    app/api/generate-plan/
-    app/api/generate-lottie/
-    app/api/validate-lottie/
+app/
+  api/analyze-asset/
+  api/feasibility-check/
+  api/suggest-motions/
+  api/generate-plan/
+  api/generate-lottie/
+  api/validate-lottie/
 packages/
   shared/
     src/motion-schema/
