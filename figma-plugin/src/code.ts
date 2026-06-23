@@ -1,4 +1,4 @@
-import type { AssetLayer, AssetLayerType, AssetSnapshot, AssetIntent } from "@lotion/shared";
+import type { AnimationPlan, AssetLayer, AssetLayerType, AssetSnapshot, AssetIntent, LottieDocument } from "@lotion/shared";
 
 const defaultBackendUrl = "https://lotion-figma-plugin.vercel.app";
 const logBuffer: LogEntry[] = [];
@@ -13,6 +13,11 @@ type LogEntry = {
   source: "plugin";
   message: string;
   data?: unknown;
+};
+
+type GenerateResult = {
+  plan: AnimationPlan;
+  lottie: LottieDocument;
 };
 
 figma.showUI(__html__, { width: 420, height: 720, themeColors: true });
@@ -76,6 +81,164 @@ function describeError(error: unknown): { name: string; message: string; stack?:
 }
 
 log("info", "Плагин запущен", { backendUrl: defaultBackendUrl });
+
+async function loadPreviewFont(): Promise<boolean> {
+  try {
+    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+    await figma.loadFontAsync({ family: "Inter", style: "Medium" });
+    return true;
+  } catch (error) {
+    log("warn", "Не удалось загрузить Inter для подписей storyboard", describeError(error));
+    return false;
+  }
+}
+
+function actionLabel(action: string): string {
+  const labels: Record<string, string> = {
+    scale_pop: "pop",
+    rotate_open: "rotate",
+    shake_x: "shake",
+    float_y: "bounce",
+    fade_in: "fade in",
+    fade_out: "fade out",
+    burst_particles: "particles",
+    shine_sweep: "shine",
+    fly_to_target: "fly",
+    stagger_appear: "stagger",
+    draw_stroke: "draw",
+    pulse: "pulse"
+  };
+
+  return labels[action] ?? action;
+}
+
+function transformForProgress(plan: AnimationPlan, progress: number, index: number) {
+  let offsetX = 0;
+  let offsetY = 0;
+  let scale = 1;
+  let rotation = 0;
+  let opacity = 1;
+
+  for (const step of plan.animationPlan) {
+    if (step.action === "float_y") offsetY -= Math.sin(progress * Math.PI) * 28;
+    if (step.action === "shake_x") offsetX += [0, -12, 12, 0][index] ?? 0;
+    if (step.action === "scale_pop" || step.action === "pulse") scale *= [0.9, 1.16, 0.98, 1][index] ?? 1;
+    if (step.action === "rotate_open") rotation += -34 * progress;
+    if (step.action === "fly_to_target") {
+      offsetX += progress * 54;
+      offsetY -= progress * 46;
+    }
+    if (step.action === "fade_in") opacity *= Math.max(0.16, progress);
+    if (step.action === "fade_out") opacity *= Math.max(0.16, 1 - progress);
+  }
+
+  return { offsetX, offsetY, scale, rotation, opacity };
+}
+
+function setNodeSize(node: SceneNode, width: number, height: number): void {
+  const maybeResizable = node as SceneNode & {
+    resizeWithoutConstraints?: (width: number, height: number) => void;
+    resize?: (width: number, height: number) => void;
+  };
+
+  if (typeof maybeResizable.resizeWithoutConstraints === "function") {
+    maybeResizable.resizeWithoutConstraints(width, height);
+    return;
+  }
+
+  if (typeof maybeResizable.resize === "function") {
+    maybeResizable.resize(width, height);
+  }
+}
+
+function setNodePlacement(node: SceneNode, x: number, y: number, opacity: number, rotation: number): void {
+  const placed = node as SceneNode & {
+    x: number;
+    y: number;
+    opacity?: number;
+    rotation?: number;
+  };
+
+  placed.x = x;
+  placed.y = y;
+  if (typeof placed.opacity === "number") placed.opacity = opacity;
+  if (typeof placed.rotation === "number") placed.rotation = rotation;
+}
+
+function createText(parent: FrameNode, text: string, x: number, y: number, size = 11): void {
+  const node = figma.createText();
+  node.fontName = { family: "Inter", style: size >= 14 ? "Medium" : "Regular" };
+  node.characters = text;
+  node.fontSize = size;
+  node.fills = [{ type: "SOLID", color: { r: 0.42, g: 0.42, b: 0.45 } }];
+  node.x = x;
+  node.y = y;
+  parent.appendChild(node);
+}
+
+async function createGeneratedStoryboard(source: SceneNode, result: GenerateResult): Promise<{ id: string; name: string }> {
+  const bounds = "absoluteBoundingBox" in source ? source.absoluteBoundingBox : undefined;
+  const sourceWidth = Math.max(24, Math.round(boundsValue(bounds, "width", "width" in source ? source.width : result.plan.width)));
+  const sourceHeight = Math.max(24, Math.round(boundsValue(bounds, "height", "height" in source ? source.height : result.plan.height)));
+  const frameCount = 4;
+  const padding = 18;
+  const cellWidth = Math.max(128, sourceWidth + 42);
+  const canvasHeight = Math.max(190, sourceHeight + 92);
+  const frame = figma.createFrame();
+  const sourceX = boundsValue(bounds, "x", "x" in source ? source.x : 0);
+  const sourceY = boundsValue(bounds, "y", "y" in source ? source.y : 0);
+  const fontReady = await loadPreviewFont();
+
+  frame.name = `Lotion storyboard - ${result.plan.scenario}`;
+  frame.resize(padding * 2 + cellWidth * frameCount, canvasHeight);
+  frame.x = sourceX + sourceWidth + 80;
+  frame.y = sourceY;
+  frame.fills = [{ type: "SOLID", color: { r: 0.96, g: 0.96, b: 0.97 } }];
+  frame.strokes = [{ type: "SOLID", color: { r: 0.82, g: 0.82, b: 0.84 } }];
+  frame.strokeWeight = 1;
+  frame.cornerRadius = 18;
+  frame.setPluginData("lotionPlan", JSON.stringify(result.plan));
+  frame.setPluginData("lotionLottie", JSON.stringify(result.lottie));
+
+  figma.currentPage.appendChild(frame);
+
+  if (fontReady) {
+    createText(frame, "Lotion Lottie storyboard", padding, 14, 14);
+    createText(frame, `${result.plan.scenario} / ${result.plan.durationMs} ms / score ${result.plan.score}`, padding, 34, 11);
+  }
+
+  for (let index = 0; index < frameCount; index += 1) {
+    const progress = index / (frameCount - 1);
+    const clone = source.clone();
+    const transform = transformForProgress(result.plan, progress, index);
+    const width = Math.max(1, sourceWidth * transform.scale);
+    const height = Math.max(1, sourceHeight * transform.scale);
+    const baseX = padding + index * cellWidth + (cellWidth - width) / 2;
+    const baseY = 62 + (sourceHeight - height) / 2;
+
+    frame.appendChild(clone);
+    setNodeSize(clone, width, height);
+    setNodePlacement(clone, baseX + transform.offsetX, baseY + transform.offsetY, transform.opacity, transform.rotation);
+
+    if (fontReady) {
+      const actions = result.plan.animationPlan.map((step) => actionLabel(step.action)).join(" + ");
+      createText(frame, `${Math.round(progress * 100)}%`, padding + index * cellWidth, canvasHeight - 44, 11);
+      createText(frame, actions || "static", padding + index * cellWidth, canvasHeight - 28, 10);
+    }
+  }
+
+  figma.currentPage.selection = [frame];
+  figma.viewport.scrollAndZoomIntoView([frame]);
+  figma.notify("Lotion: storyboard создан на холсте");
+  log("info", "Storyboard создан на холсте", {
+    frameId: frame.id,
+    frameName: frame.name,
+    scenario: result.plan.scenario,
+    lottieBytes: JSON.stringify(result.lottie).length
+  });
+
+  return { id: frame.id, name: frame.name };
+}
 
 function mapNodeType(node: SceneNode): AssetLayerType {
   if (node.type === "FRAME") return "frame";
@@ -224,12 +387,23 @@ figma.ui.onmessage = async (message) => {
         : {};
     log("info", "Получена команда из UI", { type, backendUrl, intent });
     const asset = await selectionToAsset();
+    const sourceNode = figma.currentPage.selection[0];
     const body = { asset, intent };
     const path = type === "check-feasibility" ? "/api/feasibility-check" : "/api/generate-lottie";
     const result = await postToBackend(backendUrl, path, body);
+    let createdPreview: { id: string; name: string } | undefined;
 
-    log("info", "Команда выполнена", { type });
-    figma.ui.postMessage({ type: "result", requestType: type, result });
+    if (type === "generate-lottie" && sourceNode) {
+      try {
+        createdPreview = await createGeneratedStoryboard(sourceNode, result as GenerateResult);
+      } catch (previewError) {
+        log("error", "Storyboard не создан", describeError(previewError));
+        figma.notify("Lotion: Lottie сгенерирован, но storyboard не удалось создать. Смотри логи.");
+      }
+    }
+
+    log("info", "Команда выполнена", { type, createdPreview });
+    figma.ui.postMessage({ type: "result", requestType: type, result, createdPreview });
   } catch (error) {
     const details = describeError(error);
     log("error", "Команда завершилась ошибкой", details);

@@ -7,7 +7,12 @@ const backendUrl = "https://lotion-figma-plugin.vercel.app";
 
 type PluginMessage =
   | { type: "result"; requestType: "check-feasibility"; result: FeasibilityReport }
-  | { type: "result"; requestType: "generate-lottie"; result: { plan: AnimationPlan; lottie: LottieDocument } }
+  | {
+      type: "result";
+      requestType: "generate-lottie";
+      result: { plan: AnimationPlan; lottie: LottieDocument };
+      createdPreview?: { id: string; name: string };
+    }
   | { type: "error"; message: string }
   | { type: "log-entry"; entry: LogEntry }
   | { type: "log-snapshot"; logs: LogEntry[] };
@@ -56,6 +61,7 @@ function App() {
   });
   const [report, setReport] = useState<FeasibilityReport | null>(null);
   const [plan, setPlan] = useState<AnimationPlan | null>(null);
+  const [createdPreview, setCreatedPreview] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState<"check-feasibility" | "generate-lottie" | null>(null);
   const [activeTab, setActiveTab] = useState<"check" | "logs">("check");
@@ -98,12 +104,15 @@ function App() {
         addUiLog("info", "UI получил отчёт проверки", { level: message.result.level, score: message.result.score });
         setReport(message.result);
         setPlan(null);
+        setCreatedPreview(null);
       } else {
         addUiLog("info", "UI получил план генерации", {
           scenario: message.result.plan.scenario,
-          durationMs: message.result.plan.durationMs
+          durationMs: message.result.plan.durationMs,
+          createdPreview: message.createdPreview
         });
         setPlan(message.result.plan);
+        setCreatedPreview(message.createdPreview ?? null);
       }
     };
 
@@ -129,6 +138,7 @@ function App() {
     setError("");
     setReport(null);
     setPlan(null);
+    setCreatedPreview(null);
     addUiLog("info", "UI отправил команду в plugin thread", { type, backendUrl, intent });
     parent.postMessage(
       {
@@ -300,7 +310,7 @@ function App() {
       {activeTab === "check" && plan ? (
         <section className="plan">
           <strong>{scenarioLabels[plan.scenario] ?? plan.scenario}</strong>
-          <span>{plan.animationPlan.length} шагов / {plan.durationMs} мс</span>
+          <span>{createdPreview ? `Создано: ${createdPreview.name}` : `${plan.animationPlan.length} шагов / ${plan.durationMs} мс`}</span>
         </section>
       ) : null}
     </main>

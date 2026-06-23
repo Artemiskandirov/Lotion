@@ -69,7 +69,7 @@ export const motionRecipes: MotionScenario[] = [
     label: "Attention float",
     description: "A soft idle motion for empty states, onboarding, and non-critical prompts.",
     assetTypes: ["ui_asset", "star", "badge", "button"],
-    intents: ["attention", "onboarding", "idle", "soft", "мягк"],
+    intents: ["attention", "onboarding", "idle", "soft", "bounce", "jump", "ball", "мягк", "прыг", "скач", "мяч"],
     steps: [
       { target: "body", action: "float_y", start: 0, duration: 900, easing: "ease-in-out" },
       { target: "highlight", action: "shine_sweep", start: 260, duration: 620, easing: "ease-out" }

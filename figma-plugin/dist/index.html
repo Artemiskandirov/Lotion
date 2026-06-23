@@ -676,10 +676,13 @@
         `;
       }
 
-      function renderPlan(plan) {
+      function renderPlan(plan, createdPreview) {
         planBox.hidden = false;
         const scenario = scenarioLabels[plan.scenario] || plan.scenario;
-        planBox.innerHTML = `<strong>${scenario}</strong><span>${plan.animationPlan.length} шагов / ${plan.durationMs} мс</span>`;
+        const status = createdPreview
+          ? `Создано: ${escapeHtml(createdPreview.name)}`
+          : `${plan.animationPlan.length} шагов / ${plan.durationMs} мс`;
+        planBox.innerHTML = `<strong>${scenario}</strong><span>${status}</span>`;
       }
 
       window.onmessage = (event) => {
@@ -716,9 +719,10 @@
         } else {
           addLog("info", "UI получил план генерации", {
             scenario: message.result.plan.scenario,
-            durationMs: message.result.plan.durationMs
+            durationMs: message.result.plan.durationMs,
+            createdPreview: message.createdPreview
           });
-          renderPlan(message.result.plan);
+          renderPlan(message.result.plan, message.createdPreview);
         }
       };
 
