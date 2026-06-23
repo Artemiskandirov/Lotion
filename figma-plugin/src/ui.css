@@ -381,12 +381,44 @@ ul {
   font-weight: 720;
 }
 
+.export-panel {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.84);
+  padding: 10px;
+}
+
+.export-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.export-head strong {
+  color: #1d1d1f;
+  font-size: 13px;
+}
+
+.export-head button {
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
 .json-output {
   min-height: 120px;
   max-height: 180px;
   font-family: "SF Mono", Menlo, Consolas, monospace;
   font-size: 10px;
   line-height: 1.45;
+}
+
+.lottie-output {
+  min-height: 180px;
 }
 
 .logs-panel {

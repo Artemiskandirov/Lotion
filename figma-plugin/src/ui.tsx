@@ -75,6 +75,7 @@ function App() {
   });
   const [report, setReport] = useState<FeasibilityReport | null>(null);
   const [plan, setPlan] = useState<AnimationPlan | null>(null);
+  const [lottie, setLottie] = useState<LottieDocument | null>(null);
   const [preview, setPreview] = useState<{ svg?: string; width: number; height: number } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState<"check-feasibility" | "generate-lottie" | null>(null);
@@ -118,6 +119,7 @@ function App() {
         addUiLog("info", "UI получил отчёт проверки", { level: message.result.level, score: message.result.score });
         setReport(message.result);
         setPlan(null);
+        setLottie(null);
         setPreview(null);
       } else {
         addUiLog("info", "UI получил план генерации", {
@@ -126,6 +128,7 @@ function App() {
           hasPreview: Boolean(message.preview?.svg)
         });
         setPlan(message.result.plan);
+        setLottie(message.result.lottie);
         setPreview(message.preview ?? null);
       }
     };
@@ -152,6 +155,7 @@ function App() {
     setError("");
     setReport(null);
     setPlan(null);
+    setLottie(null);
     setPreview(null);
     addUiLog("info", "UI отправил команду в plugin thread", { type, backendUrl, intent });
     parent.postMessage(
@@ -224,6 +228,25 @@ function App() {
 
   function formatStepTime(ms: number) {
     return `${(ms / 1000).toFixed(2)}с`;
+  }
+
+  function lottieJson() {
+    return lottie ? JSON.stringify(lottie, null, 2) : "";
+  }
+
+  function downloadLottie() {
+    if (!lottie || !plan) return;
+    const fileName = `lotion-${plan.scenario}-${Date.now()}.json`;
+    const blob = new Blob([JSON.stringify(lottie, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    addUiLog("info", "Lottie JSON скачан", { fileName });
   }
 
   function transformAtProgress(currentPlan: AnimationPlan, progress: number) {
@@ -360,6 +383,15 @@ function App() {
                   ))}
                 </ol>
               </div>
+              {lottie ? (
+                <section className="export-panel">
+                  <div className="export-head">
+                    <strong>Lottie JSON</strong>
+                    <button onClick={downloadLottie}>Скачать .json</button>
+                  </div>
+                  <textarea className="json-output lottie-output" readOnly value={lottieJson()} />
+                </section>
+              ) : null}
               <textarea className="json-output" readOnly value={JSON.stringify({ plan }, null, 2)} />
             </section>
           ) : null}
