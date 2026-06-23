@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@lotion/shared": "workspace:*",
+    "@lotion/shared": "file:../../packages/shared",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

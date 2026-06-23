@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@lotion/shared": "workspace:*",
+    "@lotion/shared": "file:../../packages/shared",
     "@vitejs/plugin-react": "^4.3.0",
     "vite": "^6.0.0",
     "react": "^19.0.0",

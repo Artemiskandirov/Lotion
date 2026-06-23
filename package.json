@@ -3,11 +3,11 @@
   "private": true,
   "version": "0.1.0",
   "description": "AI-assisted Lottie feasibility and motion planning for Figma assets.",
-  "packageManager": "pnpm@9.15.9",
+  "packageManager": "npm@10.9.0",
   "scripts": {
-    "dev": "pnpm --filter @lotion/web dev",
-    "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck"
+    "dev": "npm --workspace @lotion/web run dev",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces"
   },
   "workspaces": [
     "apps/*",

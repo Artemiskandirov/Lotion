@@ -90,8 +90,8 @@ Checks the generated Lottie document for basic structural validity.
 ## Local Setup
 
 ```bash
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
 
 The web app runs as a usable local feasibility tester. The Figma plugin can point its backend field to `http://localhost:3000`.
@@ -99,7 +99,7 @@ The web app runs as a usable local feasibility tester. The Figma plugin can poin
 Build the plugin:
 
 ```bash
-pnpm --filter @lotion/figma-plugin build
+npm --workspace @lotion/figma-plugin run build
 ```
 
 Then load `apps/figma-plugin/manifest.json` in Figma as a development plugin.
