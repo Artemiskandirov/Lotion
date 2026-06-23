@@ -1,6 +1,6 @@
 import type { AssetLayer, AssetLayerType, AssetSnapshot, AssetIntent } from "@lotion/shared";
 
-const defaultBackendUrl = "https://lotion-figma-plugin-git-main-artiskandirov-gmailcoms-projects.vercel.app";
+const defaultBackendUrl = "https://lotion-figma-plugin.vercel.app";
 
 figma.showUI(__html__, { width: 420, height: 620, themeColors: true });
 
@@ -77,14 +77,15 @@ async function selectionToAsset(): Promise<AssetSnapshot> {
 }
 
 async function postToBackend<T>(backendUrl: string, path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${backendUrl.replace(/\/$/, "")}${path}`, {
+  const endpoint = `${backendUrl.replace(/\/$/, "")}${path}`;
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
 
   if (!response.ok) {
-    throw new Error(`Сервер вернул ошибку ${response.status}`);
+    throw new Error(`Сервер вернул ошибку ${response.status}: ${endpoint}`);
   }
 
   return response.json() as Promise<T>;

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import type { AssetIntent, FeasibilityReport, AnimationPlan, LottieDocument } from "@lotion/shared";
 import "./ui.css";
 
-const backendUrl = "https://lotion-figma-plugin-git-main-artiskandirov-gmailcoms-projects.vercel.app";
+const backendUrl = "https://lotion-figma-plugin.vercel.app";
 
 type PluginMessage =
   | { type: "result"; requestType: "check-feasibility"; result: FeasibilityReport }
@@ -100,7 +100,7 @@ function App() {
 
       <div className="status">
         <span className="status-dot" />
-        <span>Подключение: сервер Vercel</span>
+        <span>Backend: lotion-figma-plugin.vercel.app</span>
       </div>
 
       <section className="form">

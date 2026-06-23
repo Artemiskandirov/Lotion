@@ -1,4 +1,4 @@
-var defaultBackendUrl = "https://lotion-figma-plugin-git-main-artiskandirov-gmailcoms-projects.vercel.app";
+var defaultBackendUrl = "https://lotion-figma-plugin.vercel.app";
 
 figma.showUI(__html__, { width: 420, height: 620, themeColors: true });
 
@@ -75,14 +75,15 @@ async function selectionToAsset() {
 }
 
 async function postToBackend(backendUrl, path, body) {
-  const response = await fetch(`${backendUrl.replace(/\/$/, "")}${path}`, {
+  const endpoint = `${backendUrl.replace(/\/$/, "")}${path}`;
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
 
   if (!response.ok) {
-    throw new Error(`Сервер вернул ошибку ${response.status}`);
+    throw new Error(`Сервер вернул ошибку ${response.status}: ${endpoint}`);
   }
 
   return response.json();

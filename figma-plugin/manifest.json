@@ -8,7 +8,7 @@
   "documentAccess": "dynamic-page",
   "networkAccess": {
     "allowedDomains": [
-      "https://*.vercel.app"
+      "https://lotion-figma-plugin.vercel.app"
     ],
     "reasoning": "The plugin sends selected layer structure to the Lotion backend for feasibility checks and Lottie generation."
   }
