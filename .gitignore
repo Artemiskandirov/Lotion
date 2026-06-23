@@ -2,6 +2,8 @@ node_modules
 .pnpm-store
 .next
 dist
+!figma-plugin/dist
+!figma-plugin/dist/**
 build
 .vercel
 .env
