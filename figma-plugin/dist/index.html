@@ -181,7 +181,7 @@
 
       <label>
         Backend
-        <input id="backendUrl" value="http://localhost:3000" />
+        <input id="backendUrl" value="https://lotion-figma-plugin-git-main-artiskandirov-gmailcoms-projects.vercel.app" />
       </label>
 
       <label>
@@ -252,6 +252,8 @@
       function send(type) {
         setLoading(true);
         errorBox.hidden = true;
+        reportBox.hidden = true;
+        planBox.hidden = true;
         parent.postMessage(
           {
             pluginMessage: {
@@ -289,7 +291,7 @@
 
         if (message.type === "error") {
           errorBox.hidden = false;
-          errorBox.textContent = message.message;
+          errorBox.textContent = `${message.message} Backend: ${fields.backendUrl.value}`;
           return;
         }
 

@@ -1,5 +1,7 @@
 import type { AssetLayer, AssetLayerType, AssetSnapshot, AssetIntent } from "@lotion/shared";
 
+const defaultBackendUrl = "https://lotion-figma-plugin-git-main-artiskandirov-gmailcoms-projects.vercel.app";
+
 figma.showUI(__html__, { width: 420, height: 620, themeColors: true });
 
 function mapNodeType(node: SceneNode): AssetLayerType {
@@ -98,7 +100,7 @@ figma.ui.onmessage = async (message) => {
     const backendUrl =
       "backendUrl" in message && typeof message.backendUrl === "string"
         ? message.backendUrl
-        : "http://localhost:3000";
+        : defaultBackendUrl;
     const intent =
       "intent" in message && typeof message.intent === "object"
         ? (message.intent as AssetIntent)

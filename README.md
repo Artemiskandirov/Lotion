@@ -90,7 +90,7 @@ npm install
 npm run dev
 ```
 
-The web app runs as a usable local feasibility tester. The Figma plugin can point its backend field to `http://localhost:3000`.
+The web app runs as a usable local feasibility tester. The Figma plugin points to the Vercel backend by default. Use `http://localhost:3000` only when a local Next dev server is running.
 
 Build the plugin:
 

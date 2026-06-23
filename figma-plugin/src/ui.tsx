@@ -3,13 +3,15 @@ import { createRoot } from "react-dom/client";
 import type { AssetIntent, FeasibilityReport, AnimationPlan, LottieDocument } from "@lotion/shared";
 import "./ui.css";
 
+const defaultBackendUrl = "https://lotion-figma-plugin-git-main-artiskandirov-gmailcoms-projects.vercel.app";
+
 type PluginMessage =
   | { type: "result"; requestType: "check-feasibility"; result: FeasibilityReport }
   | { type: "result"; requestType: "generate-lottie"; result: { plan: AnimationPlan; lottie: LottieDocument } }
   | { type: "error"; message: string };
 
 function App() {
-  const [backendUrl, setBackendUrl] = useState("http://localhost:3000");
+  const [backendUrl, setBackendUrl] = useState(defaultBackendUrl);
   const [intent, setIntent] = useState<AssetIntent>({
     whatIsIt: "",
     whereUsed: "",
