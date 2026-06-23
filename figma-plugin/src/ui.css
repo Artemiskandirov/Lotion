@@ -326,6 +326,18 @@ ul {
   animation-name: lotion-dynamic-preview;
 }
 
+.preview-shape {
+  display: block;
+  animation-duration: var(--preview-duration);
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  transform-origin: center;
+}
+
+.preview-shape.dynamic {
+  animation-name: lotion-dynamic-preview;
+}
+
 .preview-meta {
   display: flex;
   justify-content: space-between;

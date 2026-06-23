@@ -13,13 +13,20 @@ export type AssetLayer = {
   id: string;
   name: string;
   type: AssetLayerType;
+  shapeKind?: string;
   visible?: boolean;
+  opacity?: number;
+  rotation?: number;
   width?: number;
   height?: number;
   x?: number;
   y?: number;
   fills?: string[];
   strokes?: string[];
+  fillColors?: string[];
+  strokeColors?: string[];
+  strokeWeight?: number;
+  cornerRadius?: number;
   children?: AssetLayer[];
 };
 

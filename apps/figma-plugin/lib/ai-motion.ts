@@ -3,16 +3,23 @@ import { openAIConfig } from "./openai";
 
 const motionActions: MotionAction[] = [
   "scale_pop",
+  "soft_bounce",
+  "squash_stretch",
   "rotate_open",
+  "shake_rotate",
   "shake_x",
   "float_y",
   "fade_in",
   "fade_out",
   "burst_particles",
+  "sparkle_burst",
+  "coin_burst",
   "shine_sweep",
   "fly_to_target",
   "stagger_appear",
   "draw_stroke",
+  "button_press",
+  "pulse_glow",
   "pulse"
 ];
 
@@ -87,12 +94,12 @@ function springBounceFallback(request: AssetRequest, fallbackPlan: AnimationPlan
     scenario: "spring_bounce",
     durationMs,
     animationPlan: [
-      step(0, 620, "pulse", "ease-in-out"),
+      step(0, 620, "squash_stretch", "ease-in-out"),
       step(560, 260, "scale_pop", "spring"),
-      step(780, 1220, "float_y", "ease-out"),
-      step(2000, 320, "scale_pop", "spring"),
+      step(780, 1220, "soft_bounce", "ease-out"),
+      step(2000, 320, "squash_stretch", "spring"),
       step(2220, 260, "shake_x", "ease-in-out"),
-      step(2600, 860, "float_y", "ease-in-out")
+      step(2600, 860, "soft_bounce", "ease-in-out")
     ],
     notes: [
       "Fallback motion plan: пружинный прыжок.",
@@ -183,7 +190,7 @@ export async function planMotionWithAI(request: AssetRequest, fallbackPlan: Anim
           {
             role: "system",
             content:
-              "Ты motion designer для Figma-to-Lottie продукта. Верни короткий безопасный motion plan. Учитывай prompt, слойность asset-а и durationMs. Если prompt про мячик, прыжок, пружинку, squash/stretch или сжатие перед прыжком, выбирай scenario spring_bounce. Не обещай настоящий vector morphing, если asset один shape/vector; имитируй squash/stretch через scale/float/pulse. Все timings должны быть внутри durationMs."
+              "Ты motion designer для Figma-to-Lottie продукта. Верни короткий безопасный motion plan. Учитывай prompt, слойность asset-а и durationMs. Если prompt про мячик, прыжок, пружинку, squash/stretch или сжатие перед прыжком, выбирай scenario spring_bounce и actions squash_stretch/soft_bounce/scale_pop. Не обещай настоящий vector morphing, если asset один shape/vector; имитируй squash/stretch через non-uniform scale. Все timings должны быть внутри durationMs."
           },
           {
             role: "user",

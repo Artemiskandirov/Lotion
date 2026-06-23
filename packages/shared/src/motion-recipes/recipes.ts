@@ -69,10 +69,25 @@ export const motionRecipes: MotionScenario[] = [
     label: "Attention float",
     description: "A soft idle motion for empty states, onboarding, and non-critical prompts.",
     assetTypes: ["ui_asset", "star", "badge", "button"],
-    intents: ["attention", "onboarding", "idle", "soft", "bounce", "jump", "ball", "мягк", "прыг", "скач", "мяч"],
+    intents: ["attention", "onboarding", "idle", "soft", "мягк", "вним"],
     steps: [
       { target: "body", action: "float_y", start: 0, duration: 900, easing: "ease-in-out" },
       { target: "highlight", action: "shine_sweep", start: 260, duration: 620, easing: "ease-out" }
+    ]
+  },
+  {
+    id: "spring_bounce",
+    label: "Spring bounce",
+    description: "A squash/stretch bounce for balls, soft UI objects, and playful rewards.",
+    assetTypes: ["ui_asset", "button", "star", "badge", "character"],
+    intents: ["bounce", "jump", "ball", "spring", "squash", "stretch", "пруж", "прыг", "скач", "мяч"],
+    steps: [
+      { target: "body", action: "squash_stretch", start: 0, duration: 520, easing: "ease-in-out" },
+      { target: "body", action: "scale_pop", start: 460, duration: 240, easing: "spring" },
+      { target: "body", action: "soft_bounce", start: 640, duration: 1120, easing: "ease-out" },
+      { target: "body", action: "squash_stretch", start: 1740, duration: 300, easing: "spring" },
+      { target: "body", action: "shake_x", start: 1980, duration: 220, easing: "ease-in-out" },
+      { target: "body", action: "soft_bounce", start: 2300, duration: 760, easing: "ease-in-out" }
     ]
   },
   {

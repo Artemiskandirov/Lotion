@@ -103,21 +103,55 @@ function paintNames(node: SceneNode, key: "fills" | "strokes"): string[] | undef
   });
 }
 
-function serializeNode(node: SceneNode): AssetLayer {
+function colorToHex(color: RGB, opacity = 1): string {
+  const toChannel = (value: number) => Math.round(Math.max(0, Math.min(1, value)) * 255).toString(16).padStart(2, "0");
+  const alpha = Math.round(Math.max(0, Math.min(1, opacity)) * 255);
+  const base = `#${toChannel(color.r)}${toChannel(color.g)}${toChannel(color.b)}`;
+  return alpha < 255 ? `${base}${alpha.toString(16).padStart(2, "0")}` : base;
+}
+
+function paintColors(node: SceneNode, key: "fills" | "strokes"): string[] | undefined {
+  const paints = (node as unknown as Record<string, unknown>)[key];
+  if (!Array.isArray(paints)) return undefined;
+  const colors = paints.flatMap((paint) => {
+    if (!paint || typeof paint !== "object") return [];
+    const typedPaint = paint as Partial<SolidPaint>;
+    if (typedPaint.type !== "SOLID" || !typedPaint.color) return [];
+    if (typedPaint.visible === false) return [];
+    return [colorToHex(typedPaint.color, typedPaint.opacity ?? 1)];
+  });
+  return colors.length ? colors : undefined;
+}
+
+function numberProperty(node: SceneNode, key: string): number | undefined {
+  const value = (node as unknown as Record<string, unknown>)[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function serializeNode(node: SceneNode, rootBounds: Rect | undefined): AssetLayer {
   const bounds = "absoluteBoundingBox" in node ? node.absoluteBoundingBox : undefined;
-  const children = "children" in node ? node.children.map((child) => serializeNode(child)) : undefined;
+  const children = "children" in node ? node.children.map((child) => serializeNode(child, rootBounds)) : undefined;
+  const rootX = rootBounds?.x ?? 0;
+  const rootY = rootBounds?.y ?? 0;
 
   return {
     id: node.id,
     name: node.name,
     type: mapNodeType(node),
+    shapeKind: node.type,
     visible: node.visible,
+    opacity: numberProperty(node, "opacity"),
+    rotation: numberProperty(node, "rotation"),
     width: boundsValue(bounds, "width", "width" in node ? node.width : 0),
     height: boundsValue(bounds, "height", "height" in node ? node.height : 0),
-    x: boundsValue(bounds, "x", 0),
-    y: boundsValue(bounds, "y", 0),
+    x: boundsValue(bounds, "x", rootX) - rootX,
+    y: boundsValue(bounds, "y", rootY) - rootY,
     fills: paintNames(node, "fills"),
     strokes: paintNames(node, "strokes"),
+    fillColors: paintColors(node, "fills"),
+    strokeColors: paintColors(node, "strokes"),
+    strokeWeight: numberProperty(node, "strokeWeight"),
+    cornerRadius: numberProperty(node, "cornerRadius"),
     children
   };
 }
@@ -147,7 +181,7 @@ async function selectionToAsset(): Promise<AssetSnapshot> {
     type: mapNodeType(node),
     width: Math.max(1, Math.round(boundsValue(bounds, "width", "width" in node ? node.width : 256))),
     height: Math.max(1, Math.round(boundsValue(bounds, "height", "height" in node ? node.height : 256))),
-    layers: [serializeNode(node)],
+    layers: [serializeNode(node, bounds)],
     svg
   };
 

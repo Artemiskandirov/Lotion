@@ -24,16 +24,23 @@ export type FeasibilityReport = {
 
 export type MotionAction =
   | "scale_pop"
+  | "soft_bounce"
+  | "squash_stretch"
   | "rotate_open"
+  | "shake_rotate"
   | "shake_x"
   | "float_y"
   | "fade_in"
   | "fade_out"
   | "burst_particles"
+  | "sparkle_burst"
+  | "coin_burst"
   | "shine_sweep"
   | "fly_to_target"
   | "stagger_appear"
   | "draw_stroke"
+  | "button_press"
+  | "pulse_glow"
   | "pulse";
 
 export type MotionStep = {

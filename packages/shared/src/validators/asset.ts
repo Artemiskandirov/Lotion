@@ -44,13 +44,20 @@ function normalizeLayer(input: unknown, index: number): AssetLayer {
     id: typeof raw.id === "string" ? raw.id : `layer-${index}`,
     name: typeof raw.name === "string" && raw.name.trim() ? raw.name : `Layer ${index + 1}`,
     type,
+    shapeKind: typeof raw.shapeKind === "string" ? raw.shapeKind : undefined,
     visible: typeof raw.visible === "boolean" ? raw.visible : true,
+    opacity: toNumber(raw.opacity, 1),
+    rotation: toNumber(raw.rotation),
     width: toNumber(raw.width),
     height: toNumber(raw.height),
     x: toNumber(raw.x),
     y: toNumber(raw.y),
     fills: toStrings(raw.fills),
     strokes: toStrings(raw.strokes),
+    fillColors: toStrings(raw.fillColors),
+    strokeColors: toStrings(raw.strokeColors),
+    strokeWeight: toNumber(raw.strokeWeight),
+    cornerRadius: toNumber(raw.cornerRadius),
     children
   };
 }

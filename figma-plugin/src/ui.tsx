@@ -56,16 +56,23 @@ const scenarioLabels: Record<string, string> = {
 const actionLabels: Record<string, string> = {
   pulse: "сжимается",
   scale_pop: "распружинивается",
+  soft_bounce: "мягко подпрыгивает",
+  squash_stretch: "сжимается и растягивается",
   float_y: "прыгает",
   shake_x: "дрожит после приземления",
+  shake_rotate: "покачивается",
   rotate_open: "поворачивается",
   fade_in: "появляется",
   fade_out: "исчезает",
   burst_particles: "даёт всплеск",
+  sparkle_burst: "рассыпает искры",
+  coin_burst: "рассыпает монетки",
   shine_sweep: "блестит",
   fly_to_target: "летит к цели",
   stagger_appear: "появляется частями",
-  draw_stroke: "рисуется линией"
+  draw_stroke: "рисуется линией",
+  button_press: "нажимается",
+  pulse_glow: "подсвечивается"
 };
 
 function App() {
@@ -198,10 +205,6 @@ function App() {
     return logs.length ? logs.map(formatLogEntry).join("\n\n") : "Логов пока нет.";
   }
 
-  function previewSrc() {
-    return preview?.svg ? `data:image/svg+xml;utf8,${encodeURIComponent(preview.svg)}` : "";
-  }
-
   function previewStyle(plan: AnimationPlan) {
     const duration = `${Math.max(0.5, Math.min(5, plan.durationMs / 1000))}s`;
     return {
@@ -211,7 +214,7 @@ function App() {
 
   function planTitle(currentPlan: AnimationPlan) {
     const actions = currentPlan.animationPlan.map((step) => step.action);
-    if (currentPlan.scenario === "spring_bounce" || (actions.includes("float_y") && (actions.includes("scale_pop") || actions.includes("pulse")))) {
+    if (currentPlan.scenario === "spring_bounce" || (actions.includes("soft_bounce") || actions.includes("float_y")) && (actions.includes("scale_pop") || actions.includes("pulse") || actions.includes("squash_stretch"))) {
       return "Пружинный прыжок";
     }
     if (actions.includes("shake_x")) return "Дрожание";
@@ -220,7 +223,7 @@ function App() {
 
   function planSummary(currentPlan: AnimationPlan) {
     const actions = currentPlan.animationPlan.map((step) => step.action);
-    if (actions.includes("float_y") && (actions.includes("scale_pop") || actions.includes("pulse"))) {
+    if ((actions.includes("soft_bounce") || actions.includes("float_y")) && (actions.includes("scale_pop") || actions.includes("pulse") || actions.includes("squash_stretch"))) {
       return "Объект сначала сжимается, затем отталкивается вверх, возвращается вниз и мягко прожимается на посадке.";
     }
     return currentPlan.notes.find((note) => !note.startsWith("AI motion plan") && !note.startsWith("Duration target")) ?? "";
@@ -249,56 +252,75 @@ function App() {
     addUiLog("info", "Lottie JSON скачан", { fileName });
   }
 
-  function transformAtProgress(currentPlan: AnimationPlan, progress: number) {
-    let x = 0;
-    let y = 0;
-    let scaleX = 1;
-    let scaleY = 1;
-    let rotate = 0;
-    let opacity = 1;
+  function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  }
 
-    for (const step of currentPlan.animationPlan) {
-      const start = step.start / currentPlan.durationMs;
-      const end = (step.start + step.duration) / currentPlan.durationMs;
-      if (progress < start || progress > end) continue;
+  function firstPreviewLayer() {
+    return (lottie?.layers ?? []).map(asRecord).find((layer) => layer.ty === 2 || layer.ty === 4);
+  }
 
-      const local = Math.max(0, Math.min(1, (progress - start) / Math.max(0.001, end - start)));
-      const wave = Math.sin(local * Math.PI);
+  function numberArray(value: unknown): number[] | undefined {
+    return Array.isArray(value) && value.every((item) => typeof item === "number") ? value : undefined;
+  }
 
-      if (step.action === "float_y") y -= wave * 34;
-      if (step.action === "shake_x") x += Math.sin(local * Math.PI * 8) * 12 * (1 - local * 0.35);
-      if (step.action === "scale_pop" || step.action === "pulse") {
-        scaleX *= 1 + wave * 0.14;
-        scaleY *= 1 - wave * 0.08;
-      }
-      if (step.action === "rotate_open") rotate -= wave * 16;
-      if (step.action === "fly_to_target") {
-        x += local * 52;
-        y -= local * 42;
-      }
-      if (step.action === "fade_in") opacity *= Math.max(0.2, local);
-      if (step.action === "fade_out") opacity *= Math.max(0.2, 1 - local);
-      if (step.action === "burst_particles" || step.action === "shine_sweep") scaleX *= 1 + wave * 0.05;
-    }
+  function keyList(layer: Record<string, unknown>, key: string) {
+    const ks = asRecord(layer.ks);
+    const prop = asRecord(ks[key]);
+    return Array.isArray(prop.k) ? prop.k.map(asRecord) : [];
+  }
+
+  function valueAt(layer: Record<string, unknown>, key: string, frame: number, fallback: number[]) {
+    const keys = keyList(layer, key);
+    if (!keys.length) return fallback;
+    const exact = keys.find((item) => item.t === frame);
+    const nearest = exact ?? keys.filter((item) => typeof item.t === "number" && item.t <= frame).at(-1) ?? keys[0];
+    return numberArray(nearest.s) ?? fallback;
+  }
+
+  function lottiePreviewSrc(layer: Record<string, unknown> | undefined) {
+    if (!layer || layer.ty !== 2 || typeof layer.refId !== "string") return "";
+    const asset = (lottie?.assets ?? []).map(asRecord).find((item) => item.id === layer.refId);
+    return typeof asset?.p === "string" ? asset.p : "";
+  }
+
+  function shapePreviewStyle(layer: Record<string, unknown> | undefined): CSSProperties {
+    const shapeGroup = (Array.isArray(layer?.shapes) ? layer?.shapes : []).map(asRecord)[0];
+    const items = Array.isArray(shapeGroup?.it) ? shapeGroup.it.map(asRecord) : [];
+    const geometry = items.find((item) => item.ty === "rc" || item.ty === "el");
+    const fill = items.find((item) => item.ty === "fl");
+    const size = numberArray(asRecord(asRecord(geometry).s).k) ?? [lottie?.w ?? 80, lottie?.h ?? 80];
+    const color = numberArray(asRecord(asRecord(fill).c).k) ?? [0.24, 0.42, 0.94, 1];
+    const rgb = color.slice(0, 3).map((value) => Math.round(Math.max(0, Math.min(1, value)) * 255));
 
     return {
-      opacity,
-      transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${rotate.toFixed(1)}deg) scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})`
+      width: `${Math.max(8, size[0])}px`,
+      height: `${Math.max(8, size[1])}px`,
+      borderRadius: geometry?.ty === "el" ? "999px" : "12px",
+      background: `rgb(${rgb.join(", ")})`
     };
   }
 
-  function previewKeyframes(currentPlan: AnimationPlan) {
-    const frameSet = new Set([0, 100]);
-    for (const step of currentPlan.animationPlan) {
-      const start = (step.start / currentPlan.durationMs) * 100;
-      const middle = ((step.start + step.duration / 2) / currentPlan.durationMs) * 100;
-      const end = ((step.start + step.duration) / currentPlan.durationMs) * 100;
-      [start, middle, end].forEach((frame) => frameSet.add(Math.max(0, Math.min(100, Number(frame.toFixed(2))))));
-    }
+  function previewKeyframesFromLottie() {
+    const layer = firstPreviewLayer();
+    if (!layer || !lottie) return "";
+    const frameSet = new Set<number>([0, Number(lottie.op) || 1]);
+    ["p", "s", "r", "o"].forEach((key) => {
+      keyList(layer, key).forEach((item) => {
+        if (typeof item.t === "number") frameSet.add(item.t);
+      });
+    });
+    const op = Math.max(1, Number(lottie.op) || 1);
     const frames = Array.from(frameSet).sort((a, b) => a - b);
     const body = frames.map((frame) => {
-      const sample = transformAtProgress(currentPlan, frame / 100);
-      return `${frame}% { opacity: ${sample.opacity.toFixed(3)}; transform: ${sample.transform}; }`;
+      const p = valueAt(layer, "p", frame, [lottie.w / 2, lottie.h / 2, 0]);
+      const s = valueAt(layer, "s", frame, [100, 100, 100]);
+      const r = valueAt(layer, "r", frame, [0]);
+      const o = valueAt(layer, "o", frame, [100]);
+      const x = p[0] - lottie.w / 2;
+      const y = p[1] - lottie.h / 2;
+      const percent = Number(((frame / op) * 100).toFixed(2));
+      return `${percent}% { opacity: ${(o[0] / 100).toFixed(3)}; transform: translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) rotate(${(r[0] ?? 0).toFixed(1)}deg) scale(${(s[0] / 100).toFixed(3)}, ${(s[1] / 100).toFixed(3)}); }`;
     }).join("\n");
 
     return `@keyframes lotion-dynamic-preview {\n${body}\n}`;
@@ -364,9 +386,15 @@ function App() {
 
           {plan ? (
             <section className="preview-panel">
-              <style>{previewKeyframes(plan)}</style>
+              <style>{previewKeyframesFromLottie()}</style>
               <div className="preview-stage" style={previewStyle(plan)}>
-                {preview?.svg ? <img className="preview-asset dynamic" src={previewSrc()} alt="" /> : <span>Preview появится здесь</span>}
+                {lottiePreviewSrc(firstPreviewLayer()) ? (
+                  <img className="preview-asset dynamic" src={lottiePreviewSrc(firstPreviewLayer())} alt="" />
+                ) : firstPreviewLayer() ? (
+                  <div className="preview-shape dynamic" style={shapePreviewStyle(firstPreviewLayer())} />
+                ) : (
+                  <span>Preview появится здесь</span>
+                )}
               </div>
               <div className="preview-meta">
                 <strong>{planTitle(plan)}</strong>
