@@ -55,6 +55,20 @@ function describeError(error: unknown): { name: string; message: string; stack?:
     };
   }
 
+  if (error && typeof error === "object") {
+    try {
+      return {
+        name: "ObjectError",
+        message: JSON.stringify(error)
+      };
+    } catch (jsonError) {
+      return {
+        name: "ObjectError",
+        message: Object.prototype.toString.call(error)
+      };
+    }
+  }
+
   return {
     name: "UnknownError",
     message: String(error)

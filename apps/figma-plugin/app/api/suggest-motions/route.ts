@@ -1,5 +1,7 @@
 import { motionRecipes, runFeasibilityCheck, suggestScenarioIds } from "@lotion/shared";
-import { json, readAssetRequest } from "../../../lib/api";
+import { json, options, readAssetRequest } from "../../../lib/api";
+
+export const OPTIONS = options;
 
 export async function POST(request: Request) {
   const assetRequest = await readAssetRequest(request);

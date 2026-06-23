@@ -1,5 +1,7 @@
 import { compilePlanToLottie, generateMotionPlan, normalizeAssetRequest } from "@lotion/shared";
-import { json } from "../../../lib/api";
+import { json, options } from "../../../lib/api";
+
+export const OPTIONS = options;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
