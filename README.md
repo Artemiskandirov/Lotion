@@ -99,7 +99,7 @@ The web app runs as a usable local feasibility tester. The Figma plugin can poin
 Build the plugin:
 
 ```bash
-npm --workspace @lotion/figma-plugin run build
+npm --workspace @lotion/figma-plugin run build:plugin
 ```
 
 Then load `apps/figma-plugin/manifest.json` in Figma as a development plugin.
