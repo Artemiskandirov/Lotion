@@ -108,4 +108,12 @@ Then load `apps/figma-plugin/manifest.json` in Figma as a development plugin.
 
 The plugin should never call OpenAI directly. Keep `OPENAI_API_KEY` on the backend only.
 
+In Vercel, add this environment variable:
+
+```text
+OPENAI_API_KEY=your_openai_api_key
+```
+
+`OPENAI_MODEL` is optional for now and can be added later when the backend starts making live OpenAI requests.
+
 For the MVP, the repository includes deterministic feasibility and motion planning logic. The OpenAI integration should enrich these endpoints by producing better asset interpretation and motion plans, while code remains responsible for compiling and validating Lottie JSON.
