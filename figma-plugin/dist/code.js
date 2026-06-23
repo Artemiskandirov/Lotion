@@ -8,8 +8,13 @@ function mapNodeType(node) {
   if (node.type === "VECTOR" || node.type === "BOOLEAN_OPERATION") return "vector";
   if (["RECTANGLE", "ELLIPSE", "POLYGON", "STAR", "LINE"].includes(node.type)) return "shape";
   if (node.type === "TEXT") return "text";
-  if (paintNames(node, "fills")?.includes("image")) return "image";
+  var fills = paintNames(node, "fills");
+  if (fills && fills.includes("image")) return "image";
   return "unknown";
+}
+
+function boundsValue(bounds, key, fallback) {
+  return bounds && typeof bounds[key] === "number" ? bounds[key] : fallback;
 }
 
 function paintNames(node, key) {
@@ -30,10 +35,10 @@ function serializeNode(node) {
     name: node.name,
     type: mapNodeType(node),
     visible: node.visible,
-    width: bounds?.width ?? ("width" in node ? node.width : 0),
-    height: bounds?.height ?? ("height" in node ? node.height : 0),
-    x: bounds?.x ?? 0,
-    y: bounds?.y ?? 0,
+    width: boundsValue(bounds, "width", "width" in node ? node.width : 0),
+    height: boundsValue(bounds, "height", "height" in node ? node.height : 0),
+    x: boundsValue(bounds, "x", 0),
+    y: boundsValue(bounds, "y", 0),
     fills: paintNames(node, "fills"),
     strokes: paintNames(node, "strokes"),
     children
@@ -52,7 +57,7 @@ async function selectionToAsset() {
 
   try {
     svg = await node.exportAsync({ format: "SVG_STRING" });
-  } catch {
+  } catch (error) {
     svg = undefined;
   }
 
@@ -60,8 +65,8 @@ async function selectionToAsset() {
     id: node.id,
     name: node.name,
     type: mapNodeType(node),
-    width: Math.max(1, Math.round(bounds?.width ?? ("width" in node ? node.width : 256))),
-    height: Math.max(1, Math.round(bounds?.height ?? ("height" in node ? node.height : 256))),
+    width: Math.max(1, Math.round(boundsValue(bounds, "width", "width" in node ? node.width : 256))),
+    height: Math.max(1, Math.round(boundsValue(bounds, "height", "height" in node ? node.height : 256))),
     layers: [serializeNode(node)],
     svg
   };
