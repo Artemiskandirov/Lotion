@@ -39,6 +39,7 @@ export type AssetIntent = {
   desiredAction?: string;
   mood?: string;
   prompt?: string;
+  durationSec?: number;
 };
 
 export type AssetRequest = {

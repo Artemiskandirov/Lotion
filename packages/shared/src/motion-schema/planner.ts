@@ -21,15 +21,25 @@ export function generateMotionPlan(request: AssetRequest, scenarioId?: string): 
   const assetType = inferAssetType(request.intent, request.asset.name);
   const scenario = scenarioId ?? suggestScenarioIds(request, assetType)[0] ?? "attention_float";
   const recipe = getRecipe(scenario) ?? getRecipe("attention_float");
-  const steps = (recipe?.steps ?? []).map((step): MotionStep => {
+  const baseSteps = (recipe?.steps ?? []).map((step): MotionStep => {
     const layerName = detectedParts[step.target] ?? fallbackTargets[step.target] ?? "asset";
     return {
       ...step,
       target: layerName
     };
   });
+  const baseDurationMs = Math.max(900, ...baseSteps.map((step) => step.start + step.duration + 120));
+  const requestedDurationMs = request.intent.durationSec
+    ? Math.round(Math.max(0.5, Math.min(5, request.intent.durationSec)) * 1000)
+    : baseDurationMs;
+  const scale = requestedDurationMs / baseDurationMs;
+  const steps = baseSteps.map((step) => ({
+    ...step,
+    start: Math.round(step.start * scale),
+    duration: Math.max(120, Math.round(step.duration * scale))
+  }));
 
-  const durationMs = Math.max(900, ...steps.map((step) => step.start + step.duration + 120));
+  const durationMs = requestedDurationMs;
 
   return {
     assetType,
@@ -43,6 +53,7 @@ export function generateMotionPlan(request: AssetRequest, scenarioId?: string): 
     height: request.asset.height,
     animationPlan: steps,
     notes: [
+      `Duration target: ${(durationMs / 1000).toFixed(1)} sec.`,
       report.summary,
       ...report.cannotAnimate.map((item) => `Limitation: ${item}`),
       ...report.fixes.map((item) => `Fix: ${item}`)

@@ -22,6 +22,12 @@ function toNumber(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+function toDurationSec(value: unknown): number | undefined {
+  const duration = toNumber(value, NaN);
+  if (!Number.isFinite(duration)) return undefined;
+  return Math.max(0.5, Math.min(5, duration));
+}
+
 function toStrings(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   return value.filter((item): item is string => typeof item === "string");
@@ -76,7 +82,8 @@ export function normalizeAssetRequest(input: unknown): AssetRequest {
       desiredAction:
         typeof intentRaw.desiredAction === "string" ? intentRaw.desiredAction : undefined,
       mood: typeof intentRaw.mood === "string" ? intentRaw.mood : undefined,
-      prompt: typeof intentRaw.prompt === "string" ? intentRaw.prompt : undefined
+      prompt: typeof intentRaw.prompt === "string" ? intentRaw.prompt : undefined,
+      durationSec: toDurationSec(intentRaw.durationSec)
     }
   };
 }
