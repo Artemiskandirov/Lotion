@@ -338,6 +338,49 @@ ul {
   color: #1d1d1f;
 }
 
+.preview-details,
+#previewDetails {
+  display: grid;
+  gap: 8px;
+}
+
+.preview-summary {
+  margin: 0;
+  color: #6e6e73;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.motion-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.motion-steps li {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.07);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 8px 10px;
+  color: #1d1d1f;
+  font-size: 12px;
+}
+
+.motion-steps span {
+  color: #86868b;
+  font-size: 11px;
+}
+
+.motion-steps strong {
+  font-weight: 720;
+}
+
 .json-output {
   min-height: 120px;
   max-height: 180px;

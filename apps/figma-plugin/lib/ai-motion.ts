@@ -23,6 +23,7 @@ const scenarios = [
   "success_pop",
   "error_shake",
   "attention_float",
+  "spring_bounce",
   "progress_fill"
 ];
 
@@ -131,7 +132,7 @@ export async function planMotionWithAI(request: AssetRequest, fallbackPlan: Anim
         {
           role: "system",
           content:
-            "Ты motion designer для Figma-to-Lottie продукта. Верни короткий безопасный motion plan. Учитывай prompt, слойность asset-а и durationMs. Не обещай настоящий vector morphing, если asset один shape/vector; имитируй squash/stretch через scale/float/pulse. Все timings должны быть внутри durationMs."
+            "Ты motion designer для Figma-to-Lottie продукта. Верни короткий безопасный motion plan. Учитывай prompt, слойность asset-а и durationMs. Если prompt про мячик, прыжок, пружинку, squash/stretch или сжатие перед прыжком, выбирай scenario spring_bounce. Не обещай настоящий vector morphing, если asset один shape/vector; имитируй squash/stretch через scale/float/pulse. Все timings должны быть внутри durationMs."
         },
         {
           role: "user",

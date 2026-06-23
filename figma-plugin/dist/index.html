@@ -349,6 +349,49 @@
         color: #1d1d1f;
       }
 
+      .preview-details,
+      #previewDetails {
+        display: grid;
+        gap: 8px;
+      }
+
+      .preview-summary {
+        margin: 0;
+        color: #6e6e73;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .motion-steps {
+        display: grid;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .motion-steps li {
+        display: grid;
+        grid-template-columns: 48px 1fr;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.07);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.76);
+        padding: 8px 10px;
+        color: #1d1d1f;
+        font-size: 12px;
+      }
+
+      .motion-steps span {
+        color: #86868b;
+        font-size: 11px;
+      }
+
+      .motion-steps strong {
+        font-weight: 720;
+      }
+
       .json-output {
         min-height: 120px;
         max-height: 180px;
@@ -450,6 +493,7 @@
             <strong id="previewScenario"></strong>
             <span id="previewTiming"></span>
           </div>
+          <div id="previewDetails"></div>
           <textarea id="jsonOutput" class="json-output" readonly></textarea>
         </section>
       </section>
@@ -478,6 +522,7 @@
       const previewStage = document.getElementById("previewStage");
       const previewScenario = document.getElementById("previewScenario");
       const previewTiming = document.getElementById("previewTiming");
+      const previewDetails = document.getElementById("previewDetails");
       const jsonOutput = document.getElementById("jsonOutput");
       const appMain = document.getElementById("appMain");
       const productHeader = document.getElementById("productHeader");
@@ -523,8 +568,24 @@
         unlock_success: "Разблокировка",
         success_pop: "Успешное действие",
         error_shake: "Ошибка",
-        attention_float: "Привлечение внимания",
+        attention_float: "Мягкое движение",
+        spring_bounce: "Пружинный прыжок",
         progress_fill: "Заполнение прогресса"
+      };
+
+      const actionLabels = {
+        pulse: "сжимается",
+        scale_pop: "распружинивается",
+        float_y: "прыгает",
+        shake_x: "дрожит после приземления",
+        rotate_open: "поворачивается",
+        fade_in: "появляется",
+        fade_out: "исчезает",
+        burst_particles: "даёт всплеск",
+        shine_sweep: "блестит",
+        fly_to_target: "летит к цели",
+        stagger_appear: "появляется частями",
+        draw_stroke: "рисуется линией"
       };
 
       function intent() {
@@ -640,7 +701,7 @@
 
       function renderPlan(plan) {
         planBox.hidden = false;
-        const scenario = scenarioLabels[plan.scenario] || plan.scenario;
+        const scenario = planTitle(plan);
         const status = `${plan.animationPlan.length} шагов / ${plan.durationMs} мс`;
         planBox.innerHTML = `<strong>${scenario}</strong><span>${status}</span>`;
       }
@@ -688,15 +749,48 @@
       }
 
       function previewKeyframes(plan) {
-        return [0, 12.5, 25, 37.5, 50, 62.5, 75, 87.5, 100].map((frame) => {
+        const frameSet = new Set([0, 100]);
+        for (const step of plan.animationPlan || []) {
+          const start = (step.start / plan.durationMs) * 100;
+          const middle = ((step.start + step.duration / 2) / plan.durationMs) * 100;
+          const end = ((step.start + step.duration) / plan.durationMs) * 100;
+          [start, middle, end].forEach((frame) => frameSet.add(Math.max(0, Math.min(100, Number(frame.toFixed(2))))));
+        }
+        return Array.from(frameSet).sort((a, b) => a - b).map((frame) => {
           const sample = transformAtProgress(plan, frame / 100);
           return `${frame}% { opacity: ${sample.opacity.toFixed(3)}; transform: ${sample.transform}; }`;
         }).join("\n");
       }
 
+      function planTitle(plan) {
+        const actions = (plan.animationPlan || []).map((step) => step.action);
+        if (plan.scenario === "spring_bounce" || (actions.includes("float_y") && (actions.includes("scale_pop") || actions.includes("pulse")))) {
+          return "Пружинный прыжок";
+        }
+        if (actions.includes("shake_x")) return "Дрожание";
+        return scenarioLabels[plan.scenario] || plan.scenario;
+      }
+
+      function planSummary(plan) {
+        const actions = (plan.animationPlan || []).map((step) => step.action);
+        if (actions.includes("float_y") && (actions.includes("scale_pop") || actions.includes("pulse"))) {
+          return "Объект сначала сжимается, затем отталкивается вверх, возвращается вниз и мягко прожимается на посадке.";
+        }
+        return (plan.notes || []).find((note) => !note.startsWith("AI motion plan") && !note.startsWith("Duration target")) || "";
+      }
+
+      function stepList(plan) {
+        return (plan.animationPlan || []).map((step, index) => `
+          <li>
+            <span>${(step.start / 1000).toFixed(2)}с</span>
+            <strong>${escapeHtml(actionLabels[step.action] || step.action)}</strong>
+          </li>
+        `).join("");
+      }
+
       function renderPreview(plan, preview) {
         previewPanel.hidden = false;
-        const scenario = scenarioLabels[plan.scenario] || plan.scenario;
+        const scenario = planTitle(plan);
         dynamicPreviewStyle.textContent = `@keyframes lotion-dynamic-preview {\n${previewKeyframes(plan)}\n}`;
         previewStage.style.setProperty("--preview-duration", `${Math.max(0.5, Math.min(5, plan.durationMs / 1000))}s`);
         previewScenario.textContent = scenario;
@@ -708,6 +802,11 @@
         } else {
           previewStage.innerHTML = "<span>Preview недоступен: SVG не экспортировался</span>";
         }
+
+        previewDetails.innerHTML = `
+          <p class="preview-summary">${escapeHtml(planSummary(plan))}</p>
+          <ol class="motion-steps">${stepList(plan)}</ol>
+        `;
       }
 
       window.onmessage = (event) => {

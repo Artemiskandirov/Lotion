@@ -48,8 +48,24 @@ const scenarioLabels: Record<string, string> = {
   unlock_success: "Разблокировка",
   success_pop: "Успешное действие",
   error_shake: "Ошибка",
-  attention_float: "Привлечение внимания",
+  attention_float: "Мягкое движение",
+  spring_bounce: "Пружинный прыжок",
   progress_fill: "Заполнение прогресса"
+};
+
+const actionLabels: Record<string, string> = {
+  pulse: "сжимается",
+  scale_pop: "распружинивается",
+  float_y: "прыгает",
+  shake_x: "дрожит после приземления",
+  rotate_open: "поворачивается",
+  fade_in: "появляется",
+  fade_out: "исчезает",
+  burst_particles: "даёт всплеск",
+  shine_sweep: "блестит",
+  fly_to_target: "летит к цели",
+  stagger_appear: "появляется частями",
+  draw_stroke: "рисуется линией"
 };
 
 function App() {
@@ -189,6 +205,27 @@ function App() {
     } as CSSProperties;
   }
 
+  function planTitle(currentPlan: AnimationPlan) {
+    const actions = currentPlan.animationPlan.map((step) => step.action);
+    if (currentPlan.scenario === "spring_bounce" || (actions.includes("float_y") && (actions.includes("scale_pop") || actions.includes("pulse")))) {
+      return "Пружинный прыжок";
+    }
+    if (actions.includes("shake_x")) return "Дрожание";
+    return scenarioLabels[currentPlan.scenario] ?? currentPlan.scenario;
+  }
+
+  function planSummary(currentPlan: AnimationPlan) {
+    const actions = currentPlan.animationPlan.map((step) => step.action);
+    if (actions.includes("float_y") && (actions.includes("scale_pop") || actions.includes("pulse"))) {
+      return "Объект сначала сжимается, затем отталкивается вверх, возвращается вниз и мягко прожимается на посадке.";
+    }
+    return currentPlan.notes.find((note) => !note.startsWith("AI motion plan") && !note.startsWith("Duration target")) ?? "";
+  }
+
+  function formatStepTime(ms: number) {
+    return `${(ms / 1000).toFixed(2)}с`;
+  }
+
   function transformAtProgress(currentPlan: AnimationPlan, progress: number) {
     let x = 0;
     let y = 0;
@@ -228,7 +265,14 @@ function App() {
   }
 
   function previewKeyframes(currentPlan: AnimationPlan) {
-    const frames = [0, 12.5, 25, 37.5, 50, 62.5, 75, 87.5, 100];
+    const frameSet = new Set([0, 100]);
+    for (const step of currentPlan.animationPlan) {
+      const start = (step.start / currentPlan.durationMs) * 100;
+      const middle = ((step.start + step.duration / 2) / currentPlan.durationMs) * 100;
+      const end = ((step.start + step.duration) / currentPlan.durationMs) * 100;
+      [start, middle, end].forEach((frame) => frameSet.add(Math.max(0, Math.min(100, Number(frame.toFixed(2))))));
+    }
+    const frames = Array.from(frameSet).sort((a, b) => a - b);
     const body = frames.map((frame) => {
       const sample = transformAtProgress(currentPlan, frame / 100);
       return `${frame}% { opacity: ${sample.opacity.toFixed(3)}; transform: ${sample.transform}; }`;
@@ -302,8 +346,19 @@ function App() {
                 {preview?.svg ? <img className="preview-asset dynamic" src={previewSrc()} alt="" /> : <span>Preview появится здесь</span>}
               </div>
               <div className="preview-meta">
-                <strong>{scenarioLabels[plan.scenario] ?? plan.scenario}</strong>
+                <strong>{planTitle(plan)}</strong>
                 <span>{(plan.durationMs / 1000).toFixed(1)} сек / {plan.animationPlan.length} шага</span>
+              </div>
+              <div className="preview-details">
+                <p className="preview-summary">{planSummary(plan)}</p>
+                <ol className="motion-steps">
+                  {plan.animationPlan.map((step, index) => (
+                    <li key={`${step.action}-${step.start}-${index}`}>
+                      <span>{formatStepTime(step.start)}</span>
+                      <strong>{actionLabels[step.action] ?? step.action}</strong>
+                    </li>
+                  ))}
+                </ol>
               </div>
               <textarea className="json-output" readOnly value={JSON.stringify({ plan }, null, 2)} />
             </section>
