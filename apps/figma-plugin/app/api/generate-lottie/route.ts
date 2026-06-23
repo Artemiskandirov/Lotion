@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const scenarioId = typeof bodyRecord.scenarioId === "string" ? bodyRecord.scenarioId : undefined;
   const fallbackPlan = generateMotionPlan(assetRequest, scenarioId);
   const plan = await planMotionWithAI(assetRequest, fallbackPlan);
-  const lottie = compilePlanToLottie(plan);
+  const lottie = compilePlanToLottie(plan, assetRequest.asset.svg);
 
   return json({ plan, lottie });
 }
