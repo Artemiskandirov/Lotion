@@ -1,6 +1,6 @@
-import type { AssetLayer, AssetRequest, AssetSnapshot } from "../types/asset";
+import type { AssetLayer, AssetLayerType, AssetRequest, AssetSnapshot } from "../types/asset";
 
-const layerTypes = new Set([
+const layerTypeValues: AssetLayerType[] = [
   "frame",
   "group",
   "component",
@@ -10,7 +10,13 @@ const layerTypes = new Set([
   "text",
   "image",
   "unknown"
-]);
+];
+
+const layerTypes = new Set<AssetLayerType>(layerTypeValues);
+
+function isAssetLayerType(value: unknown): value is AssetLayerType {
+  return typeof value === "string" && layerTypes.has(value as AssetLayerType);
+}
 
 function toNumber(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -23,7 +29,7 @@ function toStrings(value: unknown): string[] | undefined {
 
 function normalizeLayer(input: unknown, index: number): AssetLayer {
   const raw = typeof input === "object" && input ? (input as Record<string, unknown>) : {};
-  const type = typeof raw.type === "string" && layerTypes.has(raw.type) ? raw.type : "unknown";
+  const type: AssetLayerType = isAssetLayerType(raw.type) ? raw.type : "unknown";
   const children = Array.isArray(raw.children)
     ? raw.children.map((child, childIndex) => normalizeLayer(child, childIndex))
     : undefined;
@@ -53,10 +59,7 @@ export function normalizeAssetRequest(input: unknown): AssetRequest {
   const asset: AssetSnapshot = {
     id: typeof assetRaw.id === "string" ? assetRaw.id : "selected-asset",
     name: typeof assetRaw.name === "string" && assetRaw.name.trim() ? assetRaw.name : "Selected asset",
-    type:
-      typeof assetRaw.type === "string" && layerTypes.has(assetRaw.type)
-        ? assetRaw.type
-        : "unknown",
+    type: isAssetLayerType(assetRaw.type) ? assetRaw.type : "unknown",
     width: Math.max(1, toNumber(assetRaw.width, 256)),
     height: Math.max(1, toNumber(assetRaw.height, 256)),
     layers: Array.isArray(assetRaw.layers)
