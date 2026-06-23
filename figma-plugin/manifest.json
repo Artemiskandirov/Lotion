@@ -5,10 +5,13 @@
   "main": "dist/code.js",
   "ui": "dist/index.html",
   "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
   "networkAccess": {
     "allowedDomains": [
-      "http://localhost:3000",
       "https://*.vercel.app"
+    ],
+    "devAllowedDomains": [
+      "http://localhost:3000"
     ],
     "reasoning": "The plugin sends selected layer structure to the Lotion backend for feasibility checks and Lottie generation."
   }

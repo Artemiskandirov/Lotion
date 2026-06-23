@@ -26,16 +26,12 @@ Figma owns the UI and access to selected layers. The backend owns AI calls, secr
 ```text
 apps/
   figma-plugin/
-    manifest.json
-    src/code.ts
-    src/ui.tsx
-app/
-  api/analyze-asset/
-  api/feasibility-check/
-  api/suggest-motions/
-  api/generate-plan/
-  api/generate-lottie/
-  api/validate-lottie/
+    app/
+    lib/
+figma-plugin/
+  manifest.json
+  src/code.ts
+  src/ui.tsx
 packages/
   shared/
     src/motion-schema/
@@ -99,21 +95,27 @@ The web app runs as a usable local feasibility tester. The Figma plugin can poin
 Build the plugin:
 
 ```bash
-npm --workspace @lotion/figma-plugin run build:plugin
+npm run build:plugin
 ```
 
-Then load `apps/figma-plugin/manifest.json` in Figma as a development plugin.
+Then load `figma-plugin/manifest.json` in Figma as a development plugin.
+
+## Figma Layer Analysis
+
+The plugin should analyze only the selected asset, not the whole Figma document. It serializes the selected node, its direct subtree, geometry from `absoluteBoundingBox`, paint summaries, visible state, names, node types, and an SVG string from `exportAsync({ format: "SVG_STRING" })`.
+
+Layer naming matters because the backend uses names like `lid`, `body`, `lock`, `eyes`, `star`, and `highlight` to decide what can safely move. If the asset is one combined vector path, Lotion should say so and offer single-object animation or layer preparation.
 
 ## AI Boundary
 
 The plugin should never call OpenAI directly. Keep `OPENAI_API_KEY` on the backend only.
+
+The backend uses `gpt-5.5` by default. Do not add `OPENAI_MODEL` unless the product deliberately supports model switching later.
 
 In Vercel, add this environment variable:
 
 ```text
 OPENAI_API_KEY=your_openai_api_key
 ```
-
-`OPENAI_MODEL` is optional for now and can be added later when the backend starts making live OpenAI requests.
 
 For the MVP, the repository includes deterministic feasibility and motion planning logic. The OpenAI integration should enrich these endpoints by producing better asset interpretation and motion plans, while code remains responsible for compiling and validating Lottie JSON.

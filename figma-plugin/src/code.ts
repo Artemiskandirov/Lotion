@@ -53,8 +53,7 @@ async function selectionToAsset(): Promise<AssetSnapshot> {
   let svg: string | undefined;
 
   try {
-    const bytes = await node.exportAsync({ format: "SVG" });
-    svg = new TextDecoder().decode(bytes);
+    svg = await node.exportAsync({ format: "SVG_STRING" });
   } catch {
     svg = undefined;
   }
