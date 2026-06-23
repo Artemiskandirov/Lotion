@@ -1,0 +1,22 @@
+{
+  "name": "lotion",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AI-assisted Lottie feasibility and motion planning for Figma assets.",
+  "packageManager": "pnpm@11.5.3",
+  "scripts": {
+    "dev": "pnpm --filter @lotion/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

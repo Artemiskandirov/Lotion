@@ -1,0 +1,15 @@
+{
+  "name": "Lotion",
+  "id": "lotion-motion-feasibility",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/index.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": [
+      "http://localhost:3000",
+      "https://*.vercel.app"
+    ],
+    "reasoning": "The plugin sends selected layer structure to the Lotion backend for feasibility checks and Lottie generation."
+  }
+}
