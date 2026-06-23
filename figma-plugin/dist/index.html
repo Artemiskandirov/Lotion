@@ -27,6 +27,12 @@
         padding: 18px;
       }
 
+      main.logs-mode {
+        grid-template-rows: auto 1fr;
+        align-content: stretch;
+        padding: 12px;
+      }
+
       header {
         display: grid;
         gap: 6px;
@@ -316,10 +322,11 @@
 
       .logs-panel {
         display: grid;
+        grid-template-rows: auto 1fr;
         gap: 10px;
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        padding: 12px;
-        min-height: 330px;
+        min-height: 0;
+        background: transparent;
+        box-shadow: none;
       }
 
       .logs-head {
@@ -343,99 +350,34 @@
         font-size: 12px;
       }
 
-      .logs-list {
-        display: grid;
-        gap: 8px;
-        max-height: 430px;
+      .logs-text {
+        min-height: 0;
+        height: 100%;
         overflow: auto;
-        padding-right: 2px;
-      }
-
-      .log {
-        display: grid;
-        gap: 6px;
+        margin: 0;
         border: 1px solid #d2d2d7;
-        border-left: 4px solid #8e8e93;
-        border-radius: 12px;
+        border-radius: 10px;
         background: #ffffff;
         padding: 10px;
-      }
-
-      .log.warn {
-        border-left-color: #ff9500;
-      }
-
-      .log.error {
-        border-left-color: #ff3b30;
-      }
-
-      .log div {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 6px;
-        color: #6e6e73;
-        font-size: 11px;
-      }
-
-      .log strong,
-      .log em {
-        border-radius: 999px;
-        background: #f5f5f7;
-        padding: 3px 6px;
         color: #1d1d1f;
-        font-style: normal;
-        font-weight: 700;
-      }
-
-      .log.error em {
-        color: #b42318;
-        background: rgba(255, 59, 48, 0.12);
-      }
-
-      .log.warn em {
-        color: #9a5b00;
-        background: rgba(255, 149, 0, 0.14);
-      }
-
-      .log p {
-        margin: 0;
-        color: #1d1d1f;
-        font-size: 12px;
-        line-height: 1.35;
-      }
-
-      .log pre {
-        max-height: 170px;
-        overflow: auto;
-        margin: 0;
-        border-radius: 10px;
-        background: #f5f5f7;
-        padding: 8px;
-        color: #3a3a3c;
         font-family: "SF Mono", Menlo, Consolas, monospace;
-        font-size: 10px;
-        line-height: 1.45;
+        font-size: 11px;
+        line-height: 1.5;
         white-space: pre-wrap;
         word-break: break-word;
-      }
-
-      .empty-log {
-        margin: 0;
-        color: #6e6e73;
-        font-size: 12px;
+        resize: none;
       }
     </style>
   </head>
   <body>
-    <main>
-      <header>
+    <main id="appMain">
+      <header id="productHeader">
         <p class="eyebrow">Lotion</p>
         <h1>Проверка анимации</h1>
         <p class="intro">Выдели один объект в Figma, опиши смысл, а Lotion скажет, насколько он подходит для Lottie.</p>
       </header>
 
-      <div class="status">
+      <div id="backendStatus" class="status">
         <span class="status-dot"></span>
         <span>Backend: lotion-figma-plugin.vercel.app</span>
       </div>
@@ -494,7 +436,7 @@
           <strong>Логи</strong>
           <button id="clearLogsButton">Очистить</button>
         </div>
-        <div id="logsList" class="logs-list"></div>
+        <textarea id="logsText" class="logs-text" readonly></textarea>
       </section>
     </main>
 
@@ -512,11 +454,14 @@
       const planBox = document.getElementById("plan");
       const checkButton = document.getElementById("checkButton");
       const generateButton = document.getElementById("generateButton");
+      const appMain = document.getElementById("appMain");
+      const productHeader = document.getElementById("productHeader");
+      const backendStatus = document.getElementById("backendStatus");
       const checkTab = document.getElementById("checkTab");
       const logsTab = document.getElementById("logsTab");
       const checkView = document.getElementById("checkView");
       const logsView = document.getElementById("logsView");
-      const logsList = document.getElementById("logsList");
+      const logsText = document.getElementById("logsText");
       const clearLogsButton = document.getElementById("clearLogsButton");
       const moodButtons = Array.from(document.querySelectorAll(".mood"));
       let logs = [
@@ -594,25 +539,7 @@
       }
 
       function renderLogs() {
-        if (!logs.length) {
-          logsList.innerHTML = '<p class="empty-log">Логов пока нет.</p>';
-          return;
-        }
-
-        logsList.innerHTML = logs.map((entry) => {
-          const data = entry.data === undefined ? "" : `<pre>${escapeHtml(formatLogData(entry.data))}</pre>`;
-          return `
-            <article class="log ${entry.level}">
-              <div>
-                <span>${new Date(entry.time).toLocaleTimeString("ru-RU")}</span>
-                <strong>${escapeHtml(entry.source)}</strong>
-                <em>${escapeHtml(entry.level)}</em>
-              </div>
-              <p>${escapeHtml(entry.message)}</p>
-              ${data}
-            </article>
-          `;
-        }).join("");
+        logsText.value = logs.length ? logs.map(formatLogEntry).join("\n\n") : "Логов пока нет.";
       }
 
       function escapeHtml(value) {
@@ -624,10 +551,22 @@
           .replace(/'/g, "&#039;");
       }
 
+      function formatLogEntry(entry) {
+        const data = formatLogData(entry.data);
+        return [
+          `${new Date(entry.time).toLocaleTimeString("ru-RU")} ${entry.source} ${entry.level}`,
+          entry.message,
+          data
+        ].filter(Boolean).join("\n");
+      }
+
       function setTab(tab) {
         const showLogs = tab === "logs";
         logsView.hidden = !showLogs;
         checkView.hidden = showLogs;
+        productHeader.hidden = showLogs;
+        backendStatus.hidden = showLogs;
+        appMain.classList.toggle("logs-mode", showLogs);
         logsTab.classList.toggle("active", showLogs);
         checkTab.classList.toggle("active", !showLogs);
         if (showLogs) renderLogs();

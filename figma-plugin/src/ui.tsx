@@ -171,18 +171,36 @@ function App() {
     }
   }
 
-  return (
-    <main>
-      <header>
-        <p className="eyebrow">Lotion</p>
-        <h1>Проверка анимации</h1>
-        <p className="intro">Выдели один объект в Figma, опиши смысл, а Lotion скажет, насколько он подходит для Lottie.</p>
-      </header>
+  function formatLogEntry(entry: LogEntry) {
+    const time = new Date(entry.time).toLocaleTimeString("ru-RU");
+    const data = formatLogData(entry.data);
+    return [
+      `${time} ${entry.source} ${entry.level}`,
+      entry.message,
+      data
+    ].filter(Boolean).join("\n");
+  }
 
-      <div className="status">
-        <span className="status-dot" />
-        <span>Backend: lotion-figma-plugin.vercel.app</span>
-      </div>
+  function formatLogs() {
+    return logs.length ? logs.map(formatLogEntry).join("\n\n") : "Логов пока нет.";
+  }
+
+  return (
+    <main className={activeTab === "logs" ? "logs-mode" : ""}>
+      {activeTab === "check" ? (
+        <header>
+          <p className="eyebrow">Lotion</p>
+          <h1>Проверка анимации</h1>
+          <p className="intro">Выдели один объект в Figma, опиши смысл, а Lotion скажет, насколько он подходит для Lottie.</p>
+        </header>
+      ) : null}
+
+      {activeTab === "check" ? (
+        <div className="status">
+          <span className="status-dot" />
+          <span>Backend: lotion-figma-plugin.vercel.app</span>
+        </div>
+      ) : null}
 
       <nav className="tabs">
         <button className={activeTab === "check" ? "active" : ""} onClick={() => setActiveTab("check")}>
@@ -268,19 +286,7 @@ function App() {
             <strong>Логи</strong>
             <button onClick={clearLogs}>Очистить</button>
           </div>
-          <div className="logs-list">
-            {logs.length ? logs.map((entry) => (
-              <article key={entry.id} className={`log ${entry.level}`}>
-                <div>
-                  <span>{new Date(entry.time).toLocaleTimeString("ru-RU")}</span>
-                  <strong>{entry.source}</strong>
-                  <em>{entry.level}</em>
-                </div>
-                <p>{entry.message}</p>
-                {entry.data !== undefined ? <pre>{formatLogData(entry.data)}</pre> : null}
-              </article>
-            )) : <p className="empty-log">Логов пока нет.</p>}
-          </div>
+          <textarea className="logs-text" readOnly value={formatLogs()} />
         </section>
       )}
 
