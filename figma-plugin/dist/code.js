@@ -1,6 +1,55 @@
 var defaultBackendUrl = "https://lotion-figma-plugin.vercel.app";
+var logBuffer = [];
+var logLimit = 200;
+var logSequence = 0;
 
-figma.showUI(__html__, { width: 420, height: 620, themeColors: true });
+figma.showUI(__html__, { width: 420, height: 720, themeColors: true });
+
+function safeData(data) {
+  if (data === undefined) return undefined;
+  try {
+    return JSON.parse(JSON.stringify(data));
+  } catch (error) {
+    return String(data);
+  }
+}
+
+function log(level, message, data) {
+  var entry = {
+    id: ++logSequence,
+    time: new Date().toISOString(),
+    level,
+    source: "plugin",
+    message,
+    data: safeData(data)
+  };
+
+  logBuffer.push(entry);
+  if (logBuffer.length > logLimit) logBuffer.splice(0, logBuffer.length - logLimit);
+
+  if (level === "error") console.error("[lotion] " + message, data || "");
+  else if (level === "warn") console.warn("[lotion] " + message, data || "");
+  else console.log("[lotion] " + message, data || "");
+
+  figma.ui.postMessage({ type: "log-entry", entry });
+}
+
+function describeError(error) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    };
+  }
+
+  return {
+    name: "UnknownError",
+    message: String(error)
+  };
+}
+
+log("info", "Плагин запущен", { backendUrl: defaultBackendUrl });
 
 function mapNodeType(node) {
   if (node.type === "FRAME") return "frame";
@@ -49,6 +98,7 @@ function serializeNode(node) {
 
 async function selectionToAsset() {
   const selection = figma.currentPage.selection;
+  log("info", "Читаю выделение", { count: selection.length });
   if (selection.length !== 1) {
     throw new Error("Выдели один объект или фрейм в Figma.");
   }
@@ -59,11 +109,13 @@ async function selectionToAsset() {
 
   try {
     svg = await node.exportAsync({ format: "SVG_STRING" });
+    log("info", "SVG экспортирован", { nodeId: node.id, bytes: svg.length });
   } catch (error) {
+    log("warn", "SVG экспорт не получился, продолжаю без SVG", describeError(error));
     svg = undefined;
   }
 
-  return {
+  const asset = {
     id: node.id,
     name: node.name,
     type: mapNodeType(node),
@@ -72,14 +124,42 @@ async function selectionToAsset() {
     layers: [serializeNode(node)],
     svg
   };
+
+  log("info", "Выделение собрано", {
+    id: asset.id,
+    name: asset.name,
+    type: asset.type,
+    width: asset.width,
+    height: asset.height,
+    hasSvg: Boolean(asset.svg)
+  });
+
+  return asset;
 }
 
 async function postToBackend(backendUrl, path, body) {
   const endpoint = `${backendUrl.replace(/\/$/, "")}${path}`;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
+  log("info", "Отправляю запрос в backend", {
+    endpoint,
+    bodyBytes: JSON.stringify(body).length
+  });
+
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+  } catch (error) {
+    log("error", "Fetch до backend упал", { endpoint, error: describeError(error) });
+    throw new Error(`Не удалось подключиться к backend: ${endpoint}. ${describeError(error).message}`);
+  }
+
+  log("info", "Backend ответил", {
+    endpoint,
+    status: response.status,
+    ok: response.ok
   });
 
   if (!response.ok) {
@@ -93,6 +173,18 @@ figma.ui.onmessage = async (message) => {
   if (!message || typeof message !== "object") return;
 
   const type = "type" in message ? message.type : undefined;
+  if (type === "request-logs") {
+    figma.ui.postMessage({ type: "log-snapshot", logs: logBuffer });
+    return;
+  }
+
+  if (type === "clear-logs") {
+    logBuffer.splice(0, logBuffer.length);
+    log("info", "Логи очищены");
+    figma.ui.postMessage({ type: "log-snapshot", logs: logBuffer });
+    return;
+  }
+
   if (type !== "check-feasibility" && type !== "generate-lottie") return;
 
   try {
@@ -102,14 +194,18 @@ figma.ui.onmessage = async (message) => {
         : defaultBackendUrl;
     const intent =
       "intent" in message && typeof message.intent === "object" ? message.intent : {};
+    log("info", "Получена команда из UI", { type, backendUrl, intent });
     const asset = await selectionToAsset();
     const body = { asset, intent };
     const path = type === "check-feasibility" ? "/api/feasibility-check" : "/api/generate-lottie";
     const result = await postToBackend(backendUrl, path, body);
 
+    log("info", "Команда выполнена", { type });
     figma.ui.postMessage({ type: "result", requestType: type, result });
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : "Что-то пошло не так.";
+    const details = describeError(error);
+    log("error", "Команда завершилась ошибкой", details);
+    const messageText = details.message || "Что-то пошло не так.";
     figma.ui.postMessage({ type: "error", message: messageText });
   }
 };

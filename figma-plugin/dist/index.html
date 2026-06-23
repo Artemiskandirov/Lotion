@@ -84,6 +84,11 @@
         gap: 12px;
       }
 
+      #checkView {
+        display: grid;
+        gap: 14px;
+      }
+
       label {
         display: grid;
         gap: 6px;
@@ -172,9 +177,34 @@
         cursor: wait;
       }
 
+      .tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        border-radius: 12px;
+        background: #e8e8ed;
+        padding: 4px;
+      }
+
+      .tabs button {
+        min-height: 34px;
+        border-radius: 9px;
+        color: #6e6e73;
+        background: transparent;
+        font-size: 13px;
+        font-weight: 760;
+      }
+
+      .tabs button.active {
+        color: #1d1d1f;
+        background: #ffffff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      }
+
       .error,
       .report,
-      .plan {
+      .plan,
+      .logs-panel {
         border-radius: 14px;
         background: rgba(255, 255, 255, 0.84);
         box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
@@ -283,6 +313,118 @@
       .plan strong {
         color: #1d1d1f;
       }
+
+      .logs-panel {
+        display: grid;
+        gap: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        padding: 12px;
+        min-height: 330px;
+      }
+
+      .logs-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .logs-head strong {
+        color: #1d1d1f;
+        font-size: 15px;
+      }
+
+      .logs-head button {
+        min-height: 30px;
+        border-radius: 999px;
+        padding: 0 10px;
+        color: #1d1d1f;
+        background: #e8e8ed;
+        font-size: 12px;
+      }
+
+      .logs-list {
+        display: grid;
+        gap: 8px;
+        max-height: 430px;
+        overflow: auto;
+        padding-right: 2px;
+      }
+
+      .log {
+        display: grid;
+        gap: 6px;
+        border: 1px solid #d2d2d7;
+        border-left: 4px solid #8e8e93;
+        border-radius: 12px;
+        background: #ffffff;
+        padding: 10px;
+      }
+
+      .log.warn {
+        border-left-color: #ff9500;
+      }
+
+      .log.error {
+        border-left-color: #ff3b30;
+      }
+
+      .log div {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        color: #6e6e73;
+        font-size: 11px;
+      }
+
+      .log strong,
+      .log em {
+        border-radius: 999px;
+        background: #f5f5f7;
+        padding: 3px 6px;
+        color: #1d1d1f;
+        font-style: normal;
+        font-weight: 700;
+      }
+
+      .log.error em {
+        color: #b42318;
+        background: rgba(255, 59, 48, 0.12);
+      }
+
+      .log.warn em {
+        color: #9a5b00;
+        background: rgba(255, 149, 0, 0.14);
+      }
+
+      .log p {
+        margin: 0;
+        color: #1d1d1f;
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .log pre {
+        max-height: 170px;
+        overflow: auto;
+        margin: 0;
+        border-radius: 10px;
+        background: #f5f5f7;
+        padding: 8px;
+        color: #3a3a3c;
+        font-family: "SF Mono", Menlo, Consolas, monospace;
+        font-size: 10px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .empty-log {
+        margin: 0;
+        color: #6e6e73;
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
@@ -298,47 +440,62 @@
         <span>Backend: lotion-figma-plugin.vercel.app</span>
       </div>
 
-      <section class="form">
-        <label>
-          Что это?
-          <input id="whatIsIt" placeholder="Например: сундук, монета, замок" />
-        </label>
+      <nav class="tabs">
+        <button id="checkTab" class="active">Проверка</button>
+        <button id="logsTab">Логи</button>
+      </nav>
 
-        <label>
-          Где используется?
-          <input id="whereUsed" placeholder="Например: детская игра, onboarding, paywall" />
-        </label>
+      <section id="checkView">
+        <section class="form">
+          <label>
+            Что это?
+            <input id="whatIsIt" placeholder="Например: сундук, монета, замок" />
+          </label>
 
-        <label>
-          Что должно произойти?
-          <input id="desiredAction" placeholder="Например: открыться, начислиться, привлечь внимание" />
-        </label>
+          <label>
+            Где используется?
+            <input id="whereUsed" placeholder="Например: детская игра, onboarding, paywall" />
+          </label>
 
-        <label>
-          Настроение
-          <input id="mood" placeholder="Например: мягкое, весёлое, премиальное" />
-        </label>
+          <label>
+            Что должно произойти?
+            <input id="desiredAction" placeholder="Например: открыться, начислиться, привлечь внимание" />
+          </label>
 
-        <div class="mood-row">
-          <button class="mood" data-mood="мягкое">Мягкое</button>
-          <button class="mood" data-mood="игровое">Игровое</button>
-          <button class="mood" data-mood="премиальное">Премиум</button>
+          <label>
+            Настроение
+            <input id="mood" placeholder="Например: мягкое, весёлое, премиальное" />
+          </label>
+
+          <div class="mood-row">
+            <button class="mood" data-mood="мягкое">Мягкое</button>
+            <button class="mood" data-mood="игровое">Игровое</button>
+            <button class="mood" data-mood="премиальное">Премиум</button>
+          </div>
+
+          <label>
+            Дополнительное описание
+            <textarea id="prompt" placeholder="Например: ребёнок получил приз после задания"></textarea>
+          </label>
+        </section>
+
+        <div class="buttons">
+          <button id="checkButton">Проверить</button>
+          <button id="generateButton" class="secondary">Сгенерировать</button>
         </div>
 
-        <label>
-          Дополнительное описание
-          <textarea id="prompt" placeholder="Например: ребёнок получил приз после задания"></textarea>
-        </label>
+        <div id="error" class="error" hidden></div>
+        <section id="report" class="report" hidden></section>
+        <section id="plan" class="plan" hidden></section>
       </section>
 
-      <div class="buttons">
-        <button id="checkButton">Проверить</button>
-        <button id="generateButton" class="secondary">Сгенерировать</button>
-      </div>
-
-      <div id="error" class="error" hidden></div>
-      <section id="report" class="report" hidden></section>
-      <section id="plan" class="plan" hidden></section>
+      <section id="logsView" class="logs-panel" hidden>
+        <div class="logs-head">
+          <strong>Логи</strong>
+          <button id="clearLogsButton">Очистить</button>
+        </div>
+        <div id="logsList" class="logs-list"></div>
+      </section>
     </main>
 
     <script>
@@ -355,7 +512,23 @@
       const planBox = document.getElementById("plan");
       const checkButton = document.getElementById("checkButton");
       const generateButton = document.getElementById("generateButton");
+      const checkTab = document.getElementById("checkTab");
+      const logsTab = document.getElementById("logsTab");
+      const checkView = document.getElementById("checkView");
+      const logsView = document.getElementById("logsView");
+      const logsList = document.getElementById("logsList");
+      const clearLogsButton = document.getElementById("clearLogsButton");
       const moodButtons = Array.from(document.querySelectorAll(".mood"));
+      let logs = [
+        {
+          id: Date.now(),
+          time: new Date().toISOString(),
+          level: "info",
+          source: "ui",
+          message: "UI загружен",
+          data: { backendUrl }
+        }
+      ];
 
       const assetLabels = {
         chest: "сундук",
@@ -399,11 +572,73 @@
         generateButton.textContent = isLoading && type === "generate-lottie" ? "Генерирую..." : "Сгенерировать";
       }
 
+      function formatLogData(data) {
+        if (data === undefined) return "";
+        try {
+          return JSON.stringify(data, null, 2);
+        } catch (error) {
+          return String(data);
+        }
+      }
+
+      function addLog(level, message, data) {
+        logs = logs.concat([{
+          id: Date.now() + Math.random(),
+          time: new Date().toISOString(),
+          level,
+          source: "ui",
+          message,
+          data
+        }]).slice(-220);
+        renderLogs();
+      }
+
+      function renderLogs() {
+        if (!logs.length) {
+          logsList.innerHTML = '<p class="empty-log">Логов пока нет.</p>';
+          return;
+        }
+
+        logsList.innerHTML = logs.map((entry) => {
+          const data = entry.data === undefined ? "" : `<pre>${escapeHtml(formatLogData(entry.data))}</pre>`;
+          return `
+            <article class="log ${entry.level}">
+              <div>
+                <span>${new Date(entry.time).toLocaleTimeString("ru-RU")}</span>
+                <strong>${escapeHtml(entry.source)}</strong>
+                <em>${escapeHtml(entry.level)}</em>
+              </div>
+              <p>${escapeHtml(entry.message)}</p>
+              ${data}
+            </article>
+          `;
+        }).join("");
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function setTab(tab) {
+        const showLogs = tab === "logs";
+        logsView.hidden = !showLogs;
+        checkView.hidden = showLogs;
+        logsTab.classList.toggle("active", showLogs);
+        checkTab.classList.toggle("active", !showLogs);
+        if (showLogs) renderLogs();
+      }
+
       function send(type) {
         setLoading(true, type);
         errorBox.hidden = true;
         reportBox.hidden = true;
         planBox.hidden = true;
+        addLog("info", "UI отправил команду в plugin thread", { type, backendUrl, intent: intent() });
         parent.postMessage(
           {
             pluginMessage: {
@@ -450,19 +685,39 @@
       window.onmessage = (event) => {
         const message = event.data.pluginMessage;
         if (!message) return;
+
+        if (message.type === "log-entry") {
+          logs = logs.concat([message.entry]).slice(-220);
+          renderLogs();
+          return;
+        }
+
+        if (message.type === "log-snapshot") {
+          logs = logs.filter((entry) => entry.source === "ui").concat(message.logs).slice(-220);
+          renderLogs();
+          return;
+        }
+
         setLoading(false);
 
         if (message.type === "error") {
+          addLog("error", "UI получил ошибку", { message: message.message });
           errorBox.hidden = false;
           errorBox.textContent = `Не получилось выполнить запрос. ${message.message}`;
+          setTab("logs");
           return;
         }
 
         errorBox.hidden = true;
         if (message.requestType === "check-feasibility") {
+          addLog("info", "UI получил отчёт проверки", { level: message.result.level, score: message.result.score });
           renderReport(message.result);
           planBox.hidden = true;
         } else {
+          addLog("info", "UI получил план генерации", {
+            scenario: message.result.plan.scenario,
+            durationMs: message.result.plan.durationMs
+          });
           renderPlan(message.result.plan);
         }
       };
@@ -472,11 +727,21 @@
           moodButtons.forEach((item) => item.classList.remove("active"));
           button.classList.add("active");
           fields.mood.value = button.dataset.mood;
+          addLog("info", "Выбрано настроение", { mood: button.dataset.mood });
         });
       });
 
+      checkTab.addEventListener("click", () => setTab("check"));
+      logsTab.addEventListener("click", () => setTab("logs"));
+      clearLogsButton.addEventListener("click", () => {
+        logs = [];
+        renderLogs();
+        parent.postMessage({ pluginMessage: { type: "clear-logs" } }, "*");
+      });
       checkButton.addEventListener("click", () => send("check-feasibility"));
       generateButton.addEventListener("click", () => send("generate-lottie"));
+      renderLogs();
+      parent.postMessage({ pluginMessage: { type: "request-logs" } }, "*");
     </script>
   </body>
 </html>
