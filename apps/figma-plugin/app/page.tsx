@@ -6,7 +6,7 @@ import type { AssetRequest, FeasibilityReport, AnimationPlan, LottieDocument } f
 const sampleAsset: AssetRequest = {
   asset: {
     id: "sample-chest",
-    name: "Reward chest",
+    name: "Сундук с наградой",
     type: "group",
     width: 320,
     height: 240,
@@ -19,11 +19,11 @@ const sampleAsset: AssetRequest = {
     ]
   },
   intent: {
-    whatIsIt: "reward chest",
-    whereUsed: "kids learning game",
-    desiredAction: "open after completing a task",
-    mood: "playful",
-    prompt: "Make it feel like the child received a prize."
+    whatIsIt: "сундук с наградой",
+    whereUsed: "детская обучающая игра",
+    desiredAction: "открыться после выполненного задания",
+    mood: "игровое",
+    prompt: "Сделай ощущение, будто ребёнок получил приз."
   }
 };
 
@@ -53,7 +53,7 @@ export default function Home() {
       body: JSON.stringify(body)
     });
 
-    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+    if (!response.ok) throw new Error(`Запрос не прошёл: ${response.status}`);
     return response.json() as Promise<T>;
   }
 
@@ -81,12 +81,13 @@ export default function Home() {
       <section className="workspace">
         <div className="panel input-panel">
           <div>
-            <p className="eyebrow">Motion Feasibility Check</p>
-            <h1>Can this be animated?</h1>
+            <p className="eyebrow">Lotion</p>
+            <h1>Проверка анимации</h1>
+            <p className="summary">Опиши смысл asset-а, а Lotion оценит, подходит ли он для Lottie.</p>
           </div>
 
           <label>
-            What is it?
+            Что это?
             <input
               value={intent.whatIsIt ?? ""}
               onChange={(event) => setIntent({ ...intent, whatIsIt: event.target.value })}
@@ -94,7 +95,7 @@ export default function Home() {
           </label>
 
           <label>
-            Where is it used?
+            Где используется?
             <input
               value={intent.whereUsed ?? ""}
               onChange={(event) => setIntent({ ...intent, whereUsed: event.target.value })}
@@ -102,7 +103,7 @@ export default function Home() {
           </label>
 
           <label>
-            What should happen?
+            Что должно произойти?
             <input
               value={intent.desiredAction ?? ""}
               onChange={(event) => setIntent({ ...intent, desiredAction: event.target.value })}
@@ -110,7 +111,7 @@ export default function Home() {
           </label>
 
           <label>
-            Mood
+            Настроение
             <input
               value={intent.mood ?? ""}
               onChange={(event) => setIntent({ ...intent, mood: event.target.value })}
@@ -118,7 +119,7 @@ export default function Home() {
           </label>
 
           <label>
-            Prompt
+            Дополнительное описание
             <textarea
               value={intent.prompt ?? ""}
               rows={4}
@@ -128,10 +129,10 @@ export default function Home() {
 
           <div className="button-row">
             <button onClick={runCheck} disabled={loading !== null}>
-              {loading === "check" ? "Checking..." : "Check feasibility"}
+              {loading === "check" ? "Проверяю..." : "Проверить"}
             </button>
             <button className="secondary" onClick={generate} disabled={loading !== null}>
-              {loading === "generate" ? "Generating..." : "Generate Lottie"}
+              {loading === "generate" ? "Генерирую..." : "Сгенерировать"}
             </button>
           </div>
         </div>
@@ -154,11 +155,11 @@ export default function Home() {
               </div>
               <div className="columns">
                 <div>
-                  <h2>Can animate</h2>
+                  <h2>Можно анимировать</h2>
                   <ul>{report.canAnimate.map((item) => <li key={item}>{item}</li>)}</ul>
                 </div>
                 <div>
-                  <h2>Needs care</h2>
+                  <h2>Что важно учесть</h2>
                   <ul>{[...report.cannotAnimate, ...report.fixes].map((item) => <li key={item}>{item}</li>)}</ul>
                 </div>
               </div>
@@ -170,14 +171,14 @@ export default function Home() {
             </>
           ) : (
             <div className="empty-state">
-              <strong>Sample asset</strong>
-              <span>Reward chest with body, lid, lock, highlights, and stars.</span>
+              <strong>Пример asset-а</strong>
+              <span>Сундук с отдельными слоями body, lid, lock, highlights и stars.</span>
             </div>
           )}
 
           {generated ? (
             <div className="output">
-              <h2>Motion plan</h2>
+              <h2>План анимации</h2>
               <pre>{JSON.stringify(generated.plan, null, 2)}</pre>
             </div>
           ) : null}

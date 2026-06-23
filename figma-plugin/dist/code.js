@@ -50,7 +50,7 @@ function serializeNode(node) {
 async function selectionToAsset() {
   const selection = figma.currentPage.selection;
   if (selection.length !== 1) {
-    throw new Error("Select one asset or frame in Figma.");
+    throw new Error("Выдели один объект или фрейм в Figma.");
   }
 
   const node = selection[0];
@@ -82,7 +82,7 @@ async function postToBackend(backendUrl, path, body) {
   });
 
   if (!response.ok) {
-    throw new Error(`Backend returned ${response.status}`);
+    throw new Error(`Сервер вернул ошибку ${response.status}`);
   }
 
   return response.json();
@@ -108,7 +108,7 @@ figma.ui.onmessage = async (message) => {
 
     figma.ui.postMessage({ type: "result", requestType: type, result });
   } catch (error) {
-    const messageText = error instanceof Error ? error.message : "Something went wrong.";
+    const messageText = error instanceof Error ? error.message : "Что-то пошло не так.";
     figma.ui.postMessage({ type: "error", message: messageText });
   }
 };

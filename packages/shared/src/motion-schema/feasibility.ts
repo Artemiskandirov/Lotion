@@ -20,6 +20,25 @@ function unique(items: string[]): string[] {
   return [...new Set(items)];
 }
 
+function assetTypeLabel(assetType: string): string {
+  const labels: Record<string, string> = {
+    chest: "сундук",
+    coin: "монета",
+    star: "звезда",
+    lock: "замок",
+    gift: "подарок",
+    badge: "бейдж",
+    button: "кнопка",
+    checkmark: "галочка",
+    warning: "предупреждение",
+    progress: "прогресс",
+    character: "персонаж",
+    ui_asset: "UI-asset"
+  };
+
+  return labels[assetType] ?? assetType;
+}
+
 export function runFeasibilityCheck(request: AssetRequest): FeasibilityReport {
   const stats = getLayerStats(request.asset.layers);
   const detectedParts = detectParts(request);
@@ -50,26 +69,26 @@ export function runFeasibilityCheck(request: AssetRequest): FeasibilityReport {
     level === "red" && characterRisk ? "sprite-sheet" : level === "red" ? "rive" : "lottie";
 
   const canAnimate = unique([
-    stats.totalLayers > 0 ? "whole asset transform" : "simple placeholder transform",
-    detectedParts.lid ? "lid opening" : "",
-    detectedParts.lock ? "lock pop or unlock motion" : "",
-    detectedParts.eyes ? "blink" : "",
-    detectedParts.star || detectedParts.highlight ? "sparkle and shine accents" : "",
-    assetType === "progress" ? "progress fill" : ""
+    stats.totalLayers > 0 ? "анимация всего объекта целиком" : "простая placeholder-анимация",
+    detectedParts.lid ? "открытие крышки" : "",
+    detectedParts.lock ? "щёлчок замка или разблокировка" : "",
+    detectedParts.eyes ? "моргание" : "",
+    detectedParts.star || detectedParts.highlight ? "искры, блики и сияние" : "",
+    assetType === "progress" ? "заполнение прогресса" : ""
   ].filter(Boolean));
 
   const cannotAnimate = unique([
-    singleComplexPath ? "separate part movement without splitting the vector" : "",
-    characterRisk ? "natural pose changes, eating, yawning, or complex acting in Lottie" : "",
-    !detectedParts.lid && /(chest|gift)/.test(assetType) ? "open/close movement for a separate lid" : "",
-    stats.images > 0 ? "precise vector morphing of raster images" : ""
+    singleComplexPath ? "движение отдельных частей без разделения общего vector path" : "",
+    characterRisk ? "естественные смены поз, еду, зевание или сложную актёрскую анимацию в Lottie" : "",
+    !detectedParts.lid && /(chest|gift)/.test(assetType) ? "открытие отдельной крышки, если крышка не вынесена в слой" : "",
+    stats.images > 0 ? "точный vector morphing растровых изображений" : ""
   ].filter(Boolean));
 
   const fixes = unique([
-    singleComplexPath ? "Split the SVG into named parts such as body, lid, lock, eyes, and highlights." : "",
-    detectedPartCount === 0 ? "Rename meaningful layers so the planner can target them safely." : "",
-    tooComplex ? "Simplify nested groups and merge decorative details that do not need to move." : "",
-    characterRisk ? "Use Rive or a sprite sheet for full character acting; keep Lottie for idle/blink/breathing." : ""
+    singleComplexPath ? "Раздели SVG на понятные части: body, lid, lock, eyes, highlights." : "",
+    detectedPartCount === 0 ? "Переименуй важные слои, чтобы планировщик мог безопасно выбрать цели анимации." : "",
+    tooComplex ? "Упрости вложенные группы и объедини декоративные детали, которые не должны двигаться." : "",
+    characterRisk ? "Для полноценной персонажной анимации лучше Rive или sprite sheet; Lottie оставить для idle, blink, breathing." : ""
   ].filter(Boolean));
 
   const recommendedScenarios = suggestScenarioIds(request, assetType).slice(0, 3);
@@ -84,28 +103,28 @@ export function runFeasibilityCheck(request: AssetRequest): FeasibilityReport {
 
   const scorecard: ScoreRow[] = [
     {
-      label: "Layer separation",
-      value: detectedPartCount >= 3 ? "Good" : singleComplexPath ? "Poor" : "Limited",
+      label: "Разделение слоёв",
+      value: detectedPartCount >= 3 ? "Хорошо" : singleComplexPath ? "Плохо" : "Ограниченно",
       status: detectedPartCount >= 3 ? "good" : singleComplexPath ? "poor" : "limited"
     },
     {
-      label: "Lottie compatibility",
-      value: recommendedFormat === "lottie" ? "Good" : "Risky",
+      label: "Совместимость с Lottie",
+      value: recommendedFormat === "lottie" ? "Хорошо" : "Рискованно",
       status: recommendedFormat === "lottie" ? "good" : "needs-work"
     },
     {
-      label: "Part animation",
-      value: detectedPartCount > 0 ? "Available" : "Whole asset only",
+      label: "Анимация частей",
+      value: detectedPartCount > 0 ? "Доступна" : "Только весь объект",
       status: detectedPartCount > 0 ? "good" : "limited"
     },
     {
-      label: "Artifact risk",
-      value: singleComplexPath || tooComplex ? "High" : "Low",
+      label: "Риск артефактов",
+      value: singleComplexPath || tooComplex ? "Высокий" : "Низкий",
       status: singleComplexPath || tooComplex ? "needs-work" : "good"
     },
     {
-      label: "Complexity",
-      value: tooComplex || characterRisk ? "High" : stats.totalLayers > 20 ? "Medium" : "Low",
+      label: "Сложность",
+      value: tooComplex || characterRisk ? "Высокая" : stats.totalLayers > 20 ? "Средняя" : "Низкая",
       status: tooComplex || characterRisk ? "needs-work" : "good"
     }
   ];
@@ -150,27 +169,27 @@ function buildSummary(
   characterRisk: boolean
 ): string {
   if (level === "green") {
-    return `This looks like a ${assetType} asset with enough separated structure for a strong Lottie animation.`;
+    return `Похоже на ${assetTypeLabel(assetType)}: структура достаточно разделена для хорошей Lottie-анимации.`;
   }
   if (level === "yellow") {
-    return `This can work as Lottie, but the safest version should animate only the parts that are clearly separated.`;
+    return "Для Lottie подойдёт, но безопаснее двигать только те части, которые явно разделены по слоям.";
   }
   if (characterRisk) {
-    return "This asks for character acting or pose changes, which is usually better as Rive or a sprite sheet.";
+    return "Запрос похож на персонажную анимацию со сменой поз. Для этого обычно лучше Rive или sprite sheet.";
   }
   if (singleComplexPath || detectedPartCount === 0) {
-    return "The asset is mostly a single combined vector, so a good part-based animation needs layer preparation first.";
+    return "Asset почти целиком собран в один vector path, поэтому для качественной анимации частей сначала нужны подготовленные слои.";
   }
-  return "The asset needs cleanup before a high-quality Lottie result, but a simple whole-object animation is possible.";
+  return "Asset нужно немного подготовить для качественного Lottie, но простая анимация всего объекта уже возможна.";
 }
 
 function buildActions(level: FeasibilityLevel, hasFixes: boolean): string[] {
-  if (level === "green") return ["Generate animation", "Show moving parts", "Make 3 variants"];
-  if (level === "yellow") return ["Generate safe animation", "Show moving parts", "Make 3 variants"];
+  if (level === "green") return ["Сгенерировать", "Показать части", "Сделать 3 варианта"];
+  if (level === "yellow") return ["Безопасная версия", "Показать части", "Сделать 3 варианта"];
   if (level === "orange") {
     return hasFixes
-      ? ["Prepare layers", "Show what to fix", "Animate as single object"]
-      : ["Try auto-split", "Animate as single object"];
+      ? ["Подготовить слои", "Что поправить", "Анимировать целиком"]
+      : ["Попробовать разделить", "Анимировать целиком"];
   }
-  return ["Use sprite approach", "Create simple Lottie fallback", "Show what to fix"];
+  return ["Лучше sprite", "Простой Lottie", "Что поправить"];
 }

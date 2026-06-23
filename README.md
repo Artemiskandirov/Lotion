@@ -1,121 +1,108 @@
 # Lotion
 
-Lotion is an AI-assisted Figma plugin for answering one question before generation:
+Lotion — Figma-плагин и backend для честной проверки: можно ли выбранный asset хорошо анимировать в Lottie.
 
-> Can this asset become a good Lottie animation?
+Идея продукта: не обещать магию одной кнопкой, а сначала объяснять дизайнеру, что получится, что не получится и какие слои нужно подготовить.
 
-The product starts with a feasibility check instead of a magic generate button. A designer selects an asset in Figma, explains what it is and where it will be used, and Lotion returns a practical motion assessment: what can move, what cannot move, which scenario fits, what needs cleanup, and whether Lottie is the right format.
-
-## Product Shape
+## Как это работает
 
 ```text
 Figma plugin
-  -> selected layer structure
+  -> выбранный объект и структура слоёв
   -> Vercel / Next.js API
   -> feasibility check
-  -> motion scenario selection
+  -> выбор motion-сценария
   -> motion plan
-  -> Lottie JSON generation
-  -> preview and export
+  -> Lottie JSON
 ```
 
-Figma owns the UI and access to selected layers. The backend owns AI calls, secrets, product limits, motion planning, and Lottie generation.
+Figma-плагин отвечает только за интерфейс и доступ к выделенным слоям. Backend отвечает за анализ, секреты, AI-логику, генерацию плана и Lottie.
 
-## Workspace
+## Структура
 
 ```text
 apps/
-  figma-plugin/
-    app/
-    lib/
-figma-plugin/
-  manifest.json
-  src/code.ts
-  src/ui.tsx
+  figma-plugin/      # Vercel / Next backend и preview
+figma-plugin/        # настоящий Figma plugin
 packages/
-  shared/
-    src/motion-schema/
-    src/motion-recipes/
-    src/lottie/
-    src/types/
+  shared/            # общие типы, feasibility, motion recipes, Lottie compiler
 ```
 
-## MVP Scope
+## MVP
 
-The first version focuses on UI and game assets:
+Первая версия фокусируется на UI/game asset-ах:
 
-- coin
-- star
-- lock
-- gift
-- chest
-- badge
-- button
-- checkmark
-- warning
-- progress bar
-
-Supported motion scenarios include reward reveal, coin collect, unlock success, success pop, error shake, attention float, and progress fill.
+- монета;
+- звезда;
+- замок;
+- подарок;
+- сундук;
+- бейдж;
+- кнопка;
+- галочка;
+- предупреждение;
+- progress bar.
 
 ## API
 
-`POST /api/analyze-asset`
+`POST /api/analyze-asset` — анализ структуры выделенного объекта.
 
-Returns inferred asset type, layer stats, detected parts, and dimensions.
+`POST /api/feasibility-check` — score, уровень риска, ограничения, рекомендации и действия.
 
-`POST /api/feasibility-check`
+`POST /api/suggest-motions` — подходящие motion-сценарии.
 
-Returns score, traffic-light level, scorecard, limitations, fixes, recommended scenarios, and product actions.
+`POST /api/generate-plan` — структурированный motion plan.
 
-`POST /api/suggest-motions`
+`POST /api/generate-lottie` — motion plan + Lottie JSON.
 
-Returns ranked motion recipes for the selected asset and intent.
+`POST /api/validate-lottie` — базовая проверка Lottie JSON.
 
-`POST /api/generate-plan`
-
-Returns a structured motion plan. This is the stable contract between AI reasoning and code generation.
-
-`POST /api/generate-lottie`
-
-Returns a motion plan plus a minimal Lottie JSON document.
-
-`POST /api/validate-lottie`
-
-Checks the generated Lottie document for basic structural validity.
-
-## Local Setup
+## Локально
 
 ```bash
 npm install
 npm run dev
 ```
 
-The web app runs as a usable local feasibility tester. The Figma plugin points to the Vercel backend by default. Use `http://localhost:3000` only when a local Next dev server is running.
-
-Build the plugin:
+Сборка Figma-плагина:
 
 ```bash
 npm run build:plugin
 ```
 
-Then load `figma-plugin/manifest.json` in Figma as a development plugin.
+Для загрузки в Figma используй:
 
-## Figma Layer Analysis
+```text
+figma-plugin/manifest.json
+```
 
-The plugin should analyze only the selected asset, not the whole Figma document. It serializes the selected node, its direct subtree, geometry from `absoluteBoundingBox`, paint summaries, visible state, names, node types, and an SVG string from `exportAsync({ format: "SVG_STRING" })`.
+## Анализ слоёв Figma
 
-Layer naming matters because the backend uses names like `lid`, `body`, `lock`, `eyes`, `star`, and `highlight` to decide what can safely move. If the asset is one combined vector path, Lotion should say so and offer single-object animation or layer preparation.
+Плагин анализирует только выделенный объект, а не весь документ. Он отправляет на backend:
 
-## AI Boundary
+- дерево выделенного node;
+- имена слоёв;
+- типы node;
+- размеры и позицию из `absoluteBoundingBox`;
+- visible state;
+- краткое описание fill/stroke;
+- SVG через `exportAsync({ format: "SVG_STRING" })`;
+- пользовательский контекст.
 
-The plugin should never call OpenAI directly. Keep `OPENAI_API_KEY` on the backend only.
+Имена слоёв важны: `lid`, `body`, `lock`, `eyes`, `star`, `highlight` помогают понять, какие части можно безопасно двигать.
 
-The backend uses `gpt-5.5` by default. Do not add `OPENAI_MODEL` unless the product deliberately supports model switching later.
+## OpenAI
 
-In Vercel, add this environment variable:
+Плагин не вызывает OpenAI напрямую. Ключ хранится только на backend.
+
+В Vercel нужна одна переменная:
 
 ```text
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-For the MVP, the repository includes deterministic feasibility and motion planning logic. The OpenAI integration should enrich these endpoints by producing better asset interpretation and motion plans, while code remains responsible for compiling and validating Lottie JSON.
+Модель по умолчанию зафиксирована в backend-коде:
+
+```text
+gpt-5.5
+```

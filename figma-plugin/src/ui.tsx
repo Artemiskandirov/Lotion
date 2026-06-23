@@ -3,15 +3,39 @@ import { createRoot } from "react-dom/client";
 import type { AssetIntent, FeasibilityReport, AnimationPlan, LottieDocument } from "@lotion/shared";
 import "./ui.css";
 
-const defaultBackendUrl = "https://lotion-figma-plugin-git-main-artiskandirov-gmailcoms-projects.vercel.app";
+const backendUrl = "https://lotion-figma-plugin-git-main-artiskandirov-gmailcoms-projects.vercel.app";
 
 type PluginMessage =
   | { type: "result"; requestType: "check-feasibility"; result: FeasibilityReport }
   | { type: "result"; requestType: "generate-lottie"; result: { plan: AnimationPlan; lottie: LottieDocument } }
   | { type: "error"; message: string };
 
+const assetLabels: Record<string, string> = {
+  chest: "сундук",
+  coin: "монета",
+  star: "звезда",
+  lock: "замок",
+  gift: "подарок",
+  badge: "бейдж",
+  button: "кнопка",
+  checkmark: "галочка",
+  warning: "предупреждение",
+  progress: "прогресс",
+  character: "персонаж",
+  ui_asset: "UI-asset"
+};
+
+const scenarioLabels: Record<string, string> = {
+  reward_reveal: "Появление награды",
+  coin_collect: "Сбор монеты",
+  unlock_success: "Разблокировка",
+  success_pop: "Успешное действие",
+  error_shake: "Ошибка",
+  attention_float: "Привлечение внимания",
+  progress_fill: "Заполнение прогресса"
+};
+
 function App() {
-  const [backendUrl, setBackendUrl] = useState(defaultBackendUrl);
   const [intent, setIntent] = useState<AssetIntent>({
     whatIsIt: "",
     whereUsed: "",
@@ -22,7 +46,7 @@ function App() {
   const [report, setReport] = useState<FeasibilityReport | null>(null);
   const [plan, setPlan] = useState<AnimationPlan | null>(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState<"check" | "generate" | null>(null);
+  const [loading, setLoading] = useState<"check-feasibility" | "generate-lottie" | null>(null);
 
   useEffect(() => {
     window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
@@ -31,7 +55,7 @@ function App() {
 
       setLoading(null);
       if (message.type === "error") {
-        setError(message.message);
+        setError(`Не получилось выполнить запрос. ${message.message}`);
         return;
       }
 
@@ -46,7 +70,10 @@ function App() {
   }, []);
 
   function send(type: "check-feasibility" | "generate-lottie") {
-    setLoading(type === "check-feasibility" ? "check" : "generate");
+    setLoading(type);
+    setError("");
+    setReport(null);
+    setPlan(null);
     parent.postMessage(
       {
         pluginMessage: {
@@ -59,52 +86,85 @@ function App() {
     );
   }
 
+  function setMood(mood: string) {
+    setIntent({ ...intent, mood });
+  }
+
   return (
     <main>
       <header>
-        <p>Motion Feasibility Check</p>
-        <h1>Can this be animated?</h1>
+        <p className="eyebrow">Lotion</p>
+        <h1>Проверка анимации</h1>
+        <p className="intro">Выдели один объект в Figma, опиши смысл, а Lotion скажет, насколько он подходит для Lottie.</p>
       </header>
 
-      <label>
-        Backend
-        <input value={backendUrl} onChange={(event) => setBackendUrl(event.target.value)} />
-      </label>
+      <div className="status">
+        <span className="status-dot" />
+        <span>Подключение: сервер Vercel</span>
+      </div>
 
-      <label>
-        What is it?
-        <input value={intent.whatIsIt} onChange={(event) => setIntent({ ...intent, whatIsIt: event.target.value })} />
-      </label>
+      <section className="form">
+        <label>
+          Что это?
+          <input
+            placeholder="Например: сундук, монета, замок"
+            value={intent.whatIsIt}
+            onChange={(event) => setIntent({ ...intent, whatIsIt: event.target.value })}
+          />
+        </label>
 
-      <label>
-        Where is it used?
-        <input value={intent.whereUsed} onChange={(event) => setIntent({ ...intent, whereUsed: event.target.value })} />
-      </label>
+        <label>
+          Где используется?
+          <input
+            placeholder="Например: детская игра, onboarding, paywall"
+            value={intent.whereUsed}
+            onChange={(event) => setIntent({ ...intent, whereUsed: event.target.value })}
+          />
+        </label>
 
-      <label>
-        What should happen?
-        <input
-          value={intent.desiredAction}
-          onChange={(event) => setIntent({ ...intent, desiredAction: event.target.value })}
-        />
-      </label>
+        <label>
+          Что должно произойти?
+          <input
+            placeholder="Например: открыться, начислиться, привлечь внимание"
+            value={intent.desiredAction}
+            onChange={(event) => setIntent({ ...intent, desiredAction: event.target.value })}
+          />
+        </label>
 
-      <label>
-        Mood
-        <input value={intent.mood} onChange={(event) => setIntent({ ...intent, mood: event.target.value })} />
-      </label>
+        <label>
+          Настроение
+          <input
+            placeholder="Например: мягкое, весёлое, премиальное"
+            value={intent.mood}
+            onChange={(event) => setIntent({ ...intent, mood: event.target.value })}
+          />
+        </label>
 
-      <label>
-        Prompt
-        <textarea value={intent.prompt} rows={3} onChange={(event) => setIntent({ ...intent, prompt: event.target.value })} />
-      </label>
+        <div className="mood-row">
+          {["мягкое", "игровое", "премиальное"].map((mood) => (
+            <button key={mood} className={`mood ${intent.mood === mood ? "active" : ""}`} onClick={() => setMood(mood)}>
+              {mood === "премиальное" ? "Премиум" : mood[0].toUpperCase() + mood.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        <label>
+          Дополнительное описание
+          <textarea
+            placeholder="Например: ребёнок получил приз после задания"
+            value={intent.prompt}
+            rows={3}
+            onChange={(event) => setIntent({ ...intent, prompt: event.target.value })}
+          />
+        </label>
+      </section>
 
       <div className="buttons">
         <button onClick={() => send("check-feasibility")} disabled={loading !== null}>
-          {loading === "check" ? "Checking..." : "Check"}
+          {loading === "check-feasibility" ? "Проверяю..." : "Проверить"}
         </button>
-        <button className="dark" onClick={() => send("generate-lottie")} disabled={loading !== null}>
-          {loading === "generate" ? "Generating..." : "Generate"}
+        <button className="secondary" onClick={() => send("generate-lottie")} disabled={loading !== null}>
+          {loading === "generate-lottie" ? "Генерирую..." : "Сгенерировать"}
         </button>
       </div>
 
@@ -112,16 +172,19 @@ function App() {
 
       {report ? (
         <section className={`report ${report.level}`}>
-          <div>
+          <div className="score">
             <strong>{report.title}</strong>
-            <span>{report.assetType}</span>
+            <span className={`badge ${report.level}`}>{assetLabels[report.assetType] ?? report.assetType}</span>
           </div>
-          <p>{report.summary}</p>
-          <ul>
-            {report.canAnimate.slice(0, 4).map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
+          <p className="summary">{report.summary}</p>
+          <div>
+            <p className="section-title">Можно анимировать</p>
+            <ul>{report.canAnimate.slice(0, 4).map((item) => <li key={item}>{item}</li>)}</ul>
+          </div>
+          <div>
+            <p className="section-title">Что важно учесть</p>
+            <ul>{(report.fixes.length ? report.fixes : ["Явных проблем не найдено."]).slice(0, 3).map((item) => <li key={item}>{item}</li>)}</ul>
+          </div>
           <div className="actions">
             {report.actions.map((action) => (
               <span key={action}>{action}</span>
@@ -132,8 +195,8 @@ function App() {
 
       {plan ? (
         <section className="plan">
-          <strong>{plan.scenario}</strong>
-          <span>{plan.animationPlan.length} steps / {plan.durationMs} ms</span>
+          <strong>{scenarioLabels[plan.scenario] ?? plan.scenario}</strong>
+          <span>{plan.animationPlan.length} шагов / {plan.durationMs} мс</span>
         </section>
       ) : null}
     </main>
