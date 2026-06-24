@@ -1,6 +1,8 @@
 import type { AssetLayer, AssetLayerType, AssetSnapshot, AssetIntent, StoryboardDSL, Track, LayerOp, Keyframe } from "@lotion/shared";
 
 const defaultBackendUrl = "https://lotion-figma-plugin.vercel.app";
+const backendStorageKey = "lotion:backendUrl";
+let currentBackendUrl = defaultBackendUrl;
 const logBuffer: LogEntry[] = [];
 const logLimit = 200;
 let logSequence = 0;
@@ -67,7 +69,20 @@ function describeError(error: unknown): { name: string; message: string; stack?:
   return { name: "UnknownError", message: String(error) };
 }
 
-log("info", "Плагин запущен", { backendUrl: defaultBackendUrl });
+async function loadBackendUrl(): Promise<void> {
+  try {
+    const stored = await figma.clientStorage.getAsync(backendStorageKey);
+    if (typeof stored === "string" && stored.trim()) {
+      currentBackendUrl = stored.trim();
+    }
+  } catch (error) {
+    log("warn", "Не удалось прочитать backend URL из clientStorage", describeError(error));
+  }
+  log("info", "Плагин запущен", { backendUrl: currentBackendUrl });
+  figma.ui.postMessage({ type: "backend-url", backendUrl: currentBackendUrl });
+}
+
+void loadBackendUrl();
 
 function mapNodeType(node: SceneNode): AssetLayerType {
   if (node.type === "FRAME") return "frame";
@@ -370,6 +385,7 @@ figma.ui.onmessage = async (message) => {
 
   if (type === "request-logs") {
     figma.ui.postMessage({ type: "log-snapshot", logs: logBuffer });
+    figma.ui.postMessage({ type: "backend-url", backendUrl: currentBackendUrl });
     return;
   }
   if (type === "clear-logs") {
@@ -377,9 +393,21 @@ figma.ui.onmessage = async (message) => {
     figma.ui.postMessage({ type: "log-snapshot", logs: logBuffer });
     return;
   }
+  if (type === "set-backend-url") {
+    const next = "backendUrl" in message && typeof message.backendUrl === "string" ? message.backendUrl.trim() : "";
+    currentBackendUrl = next || defaultBackendUrl;
+    try {
+      await figma.clientStorage.setAsync(backendStorageKey, currentBackendUrl);
+    } catch (error) {
+      log("warn", "Не удалось сохранить backend URL", describeError(error));
+    }
+    log("info", "Backend URL обновлён", { backendUrl: currentBackendUrl });
+    figma.ui.postMessage({ type: "backend-url", backendUrl: currentBackendUrl });
+    return;
+  }
 
   try {
-    const backendUrl = "backendUrl" in message && typeof message.backendUrl === "string" ? message.backendUrl : defaultBackendUrl;
+    const backendUrl = currentBackendUrl;
 
     if (type === "plan-storyboard") {
       const intent = "intent" in message && typeof message.intent === "object" ? (message.intent as AssetIntent) : {};
@@ -413,16 +441,6 @@ figma.ui.onmessage = async (message) => {
       return;
     }
 
-    if (type === "check-feasibility" || type === "generate-lottie") {
-      const intent = "intent" in message && typeof message.intent === "object" ? (message.intent as AssetIntent) : {};
-      const { asset } = await selectionToAsset();
-      const body = { asset, intent };
-      const path = type === "check-feasibility" ? "/api/feasibility-check" : "/api/generate-lottie";
-      const result = await postToBackend(backendUrl, path, body);
-      const preview = type === "generate-lottie" ? { svg: asset.svg, width: asset.width, height: asset.height } : undefined;
-      figma.ui.postMessage({ type: "result", requestType: type, result, preview });
-      return;
-    }
   } catch (error) {
     const details = describeError(error);
     log("error", "Команда завершилась ошибкой", details);

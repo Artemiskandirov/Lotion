@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import type { AssetIntent, AssetSnapshot, LottieDocument, StoryboardDSL } from "@lotion/shared";
 import "./ui.css";
 
-const backendUrl = "https://lotion-figma-plugin.vercel.app";
+const defaultBackendUrl = "https://lotion-figma-plugin.vercel.app";
 
 type LogEntry = {
   id: number;
@@ -34,7 +34,8 @@ type PluginMessage =
   | LottieReady
   | { type: "error"; message: string }
   | { type: "log-entry"; entry: LogEntry }
-  | { type: "log-snapshot"; logs: LogEntry[] };
+  | { type: "log-snapshot"; logs: LogEntry[] }
+  | { type: "backend-url"; backendUrl: string };
 
 type Step = "prompt" | "storyboard" | "lottie";
 
@@ -49,8 +50,10 @@ function App() {
   const [frames, setFrames] = useState<string[]>([]);
   const [lottie, setLottie] = useState<LottieDocument | null>(null);
   const [activeFrame, setActiveFrame] = useState(0);
-  const [tab, setTab] = useState<"main" | "logs">("main");
+  const [tab, setTab] = useState<"main" | "logs" | "settings">("main");
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [backendUrl, setBackendUrl] = useState(defaultBackendUrl);
+  const [backendDraft, setBackendDraft] = useState(defaultBackendUrl);
 
   useEffect(() => {
     window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
@@ -89,6 +92,11 @@ function App() {
         setStep("lottie");
         return;
       }
+      if (message.type === "backend-url") {
+        setBackendUrl(message.backendUrl);
+        setBackendDraft(message.backendUrl);
+        return;
+      }
     };
     parent.postMessage({ pluginMessage: { type: "request-logs" } }, "*");
   }, []);
@@ -106,7 +114,7 @@ function App() {
     setError("");
     setLoading("plan");
     parent.postMessage(
-      { pluginMessage: { type: "plan-storyboard", backendUrl, intent } },
+      { pluginMessage: { type: "plan-storyboard", intent } },
       "*"
     );
   }
@@ -116,7 +124,22 @@ function App() {
     setError("");
     setLoading("compile");
     parent.postMessage(
-      { pluginMessage: { type: "commit-lottie", backendUrl, dsl, asset } },
+      { pluginMessage: { type: "commit-lottie", dsl, asset } },
+      "*"
+    );
+  }
+
+  function saveBackendUrl() {
+    parent.postMessage(
+      { pluginMessage: { type: "set-backend-url", backendUrl: backendDraft } },
+      "*"
+    );
+  }
+
+  function resetBackendUrl() {
+    setBackendDraft(defaultBackendUrl);
+    parent.postMessage(
+      { pluginMessage: { type: "set-backend-url", backendUrl: defaultBackendUrl } },
       "*"
     );
   }
@@ -176,7 +199,31 @@ function App() {
         <button className={tab === "logs" ? "active" : ""} onClick={() => setTab("logs")}>
           Логи
         </button>
+        <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}>
+          Backend
+        </button>
       </nav>
+
+      {tab === "settings" ? (
+        <section className="logs-panel">
+          <div className="logs-head">
+            <strong>Backend URL</strong>
+            <button onClick={resetBackendUrl}>Сбросить</button>
+          </div>
+          <p className="intro">
+            Текущий: <code>{backendUrl}</code>
+            <br />
+            Для локальной разработки укажи <code>http://localhost:3000</code> и запусти <code>npm run dev:backend</code>.
+          </p>
+          <input
+            type="text"
+            value={backendDraft}
+            onChange={(e) => setBackendDraft(e.target.value)}
+            style={{ width: "100%", padding: 8, marginBottom: 8 }}
+          />
+          <button onClick={saveBackendUrl}>Сохранить</button>
+        </section>
+      ) : null}
 
       {tab === "logs" ? (
         <section className="logs-panel">

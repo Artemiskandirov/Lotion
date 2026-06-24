@@ -8,7 +8,8 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "jsx": "preserve"
   },
   "include": [
     "next-env.d.ts",
@@ -18,5 +19,8 @@
     "../../packages/shared/src/**/*.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "src"]
+  "exclude": [
+    "node_modules",
+    "src"
+  ]
 }

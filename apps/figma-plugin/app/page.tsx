@@ -1,76 +1,77 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { AssetRequest, FeasibilityReport, AnimationPlan, LottieDocument } from "@lotion/shared";
+import { useState } from "react";
+import type { AssetRequest, LottieDocument, StoryboardDSL } from "@lotion/shared";
 
 const sampleAsset: AssetRequest = {
   asset: {
-    id: "sample-chest",
-    name: "Сундук с наградой",
-    type: "group",
-    width: 320,
-    height: 240,
+    id: "sample-lock",
+    name: "lock",
+    type: "frame",
+    width: 120,
+    height: 160,
     layers: [
-      { id: "body", name: "body", type: "group", width: 260, height: 140 },
-      { id: "lid", name: "lid", type: "group", width: 260, height: 72 },
-      { id: "lock", name: "lock", type: "vector", width: 38, height: 46 },
-      { id: "highlight", name: "highlights", type: "group", width: 220, height: 80 },
-      { id: "sparkles", name: "stars", type: "group", width: 280, height: 120 }
+      {
+        id: "root",
+        name: "lock",
+        type: "frame",
+        children: [
+          { id: "lid-1", name: "lid", type: "vector", width: 120, height: 40, x: 0, y: 0 },
+          { id: "body-1", name: "body", type: "vector", width: 120, height: 120, x: 0, y: 40 }
+        ]
+      }
     ]
   },
-  intent: {
-    whatIsIt: "сундук с наградой",
-    whereUsed: "детская обучающая игра",
-    desiredAction: "открыться после выполненного задания",
-    mood: "игровое",
-    prompt: "Сделай ощущение, будто ребёнок получил приз."
-  }
+  intent: { prompt: "подпрыгни, крышка слегка открывается", durationSec: 2 }
 };
 
-type LottieResponse = {
-  plan: AnimationPlan;
-  lottie: LottieDocument;
-};
+type PlanResponse = { dsl: StoryboardDSL; layerOps: unknown[]; rationale: string };
+type CompileResponse = { lottie: LottieDocument };
 
 export default function Home() {
-  const [intent, setIntent] = useState(sampleAsset.intent);
-  const [report, setReport] = useState<FeasibilityReport | null>(null);
-  const [generated, setGenerated] = useState<LottieResponse | null>(null);
-  const [loading, setLoading] = useState<"check" | "generate" | null>(null);
+  const [prompt, setPrompt] = useState(sampleAsset.intent.prompt ?? "");
+  const [dsl, setDsl] = useState<StoryboardDSL | null>(null);
+  const [rationale, setRationale] = useState("");
+  const [lottie, setLottie] = useState<LottieDocument | null>(null);
+  const [loading, setLoading] = useState<"plan" | "compile" | null>(null);
+  const [error, setError] = useState("");
 
-  const requestBody = useMemo<AssetRequest>(
-    () => ({
-      ...sampleAsset,
-      intent
-    }),
-    [intent]
-  );
-
-  async function post<T>(url: string, body: unknown): Promise<T> {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-
-    if (!response.ok) throw new Error(`Запрос не прошёл: ${response.status}`);
-    return response.json() as Promise<T>;
-  }
-
-  async function runCheck() {
-    setLoading("check");
-    setGenerated(null);
+  async function plan() {
+    setLoading("plan");
+    setError("");
+    setLottie(null);
     try {
-      setReport(await post<FeasibilityReport>("/api/feasibility-check", requestBody));
+      const res = await fetch("/api/plan-storyboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...sampleAsset, intent: { ...sampleAsset.intent, prompt } })
+      });
+      if (!res.ok) throw new Error(`plan failed: ${res.status}`);
+      const data = (await res.json()) as PlanResponse;
+      setDsl(data.dsl);
+      setRationale(data.rationale);
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
     } finally {
       setLoading(null);
     }
   }
 
-  async function generate() {
-    setLoading("generate");
+  async function compile() {
+    if (!dsl) return;
+    setLoading("compile");
+    setError("");
     try {
-      setGenerated(await post<LottieResponse>("/api/generate-lottie", requestBody));
+      const res = await fetch("/api/compile-lottie", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dsl, asset: sampleAsset.asset })
+      });
+      if (!res.ok) throw new Error(`compile failed: ${res.status}`);
+      const data = (await res.json()) as CompileResponse;
+      setLottie(data.lottie);
+    } catch (e) {
+      setError(String((e as Error).message ?? e));
     } finally {
       setLoading(null);
     }
@@ -80,107 +81,45 @@ export default function Home() {
     <main className="shell">
       <section className="workspace">
         <div className="panel input-panel">
-          <div>
-            <p className="eyebrow">Lotion</p>
-            <h1>Проверка анимации</h1>
-            <p className="summary">Опиши смысл asset-а, а Lotion оценит, подходит ли он для Lottie.</p>
-          </div>
-
+          <p className="eyebrow">Lotion · Backend smoke test</p>
+          <h1>plan-storyboard / compile-lottie</h1>
+          <p className="summary">
+            Бэкенд для Figma-плагина Lotion. Эта страница — быстрая проверка обоих endpoint'ов на
+            фиктивном asset-е (lock с lid и body). Реальный flow живёт в плагине.
+          </p>
           <label>
-            Что это?
-            <input
-              value={intent.whatIsIt ?? ""}
-              onChange={(event) => setIntent({ ...intent, whatIsIt: event.target.value })}
-            />
+            Prompt
+            <textarea rows={3} value={prompt} onChange={(e) => setPrompt(e.target.value)} />
           </label>
-
-          <label>
-            Где используется?
-            <input
-              value={intent.whereUsed ?? ""}
-              onChange={(event) => setIntent({ ...intent, whereUsed: event.target.value })}
-            />
-          </label>
-
-          <label>
-            Что должно произойти?
-            <input
-              value={intent.desiredAction ?? ""}
-              onChange={(event) => setIntent({ ...intent, desiredAction: event.target.value })}
-            />
-          </label>
-
-          <label>
-            Настроение
-            <input
-              value={intent.mood ?? ""}
-              onChange={(event) => setIntent({ ...intent, mood: event.target.value })}
-            />
-          </label>
-
-          <label>
-            Дополнительное описание
-            <textarea
-              value={intent.prompt ?? ""}
-              rows={4}
-              onChange={(event) => setIntent({ ...intent, prompt: event.target.value })}
-            />
-          </label>
-
           <div className="button-row">
-            <button onClick={runCheck} disabled={loading !== null}>
-              {loading === "check" ? "Проверяю..." : "Проверить"}
+            <button onClick={plan} disabled={loading !== null}>
+              {loading === "plan" ? "Планирую..." : "POST /api/plan-storyboard"}
             </button>
-            <button className="secondary" onClick={generate} disabled={loading !== null}>
-              {loading === "generate" ? "Генерирую..." : "Сгенерировать"}
+            <button className="secondary" onClick={compile} disabled={loading !== null || !dsl}>
+              {loading === "compile" ? "Собираю..." : "POST /api/compile-lottie"}
             </button>
           </div>
+          {error ? <p style={{ color: "salmon" }}>{error}</p> : null}
         </div>
 
         <div className="panel result-panel">
-          {report ? (
+          {dsl ? (
             <>
-              <div className={`score ${report.level}`}>
-                <span>{report.title}</span>
-                <strong>{report.assetType}</strong>
-              </div>
-              <p className="summary">{report.summary}</p>
-              <div className="scorecard">
-                {report.scorecard.map((row) => (
-                  <div key={row.label}>
-                    <span>{row.label}</span>
-                    <strong>{row.value}</strong>
-                  </div>
-                ))}
-              </div>
-              <div className="columns">
-                <div>
-                  <h2>Можно анимировать</h2>
-                  <ul>{report.canAnimate.map((item) => <li key={item}>{item}</li>)}</ul>
-                </div>
-                <div>
-                  <h2>Что важно учесть</h2>
-                  <ul>{[...report.cannotAnimate, ...report.fixes].map((item) => <li key={item}>{item}</li>)}</ul>
-                </div>
-              </div>
-              <div className="actions">
-                {report.actions.map((action) => (
-                  <span key={action}>{action}</span>
-                ))}
-              </div>
+              <h2>DSL</h2>
+              <p className="summary">{rationale}</p>
+              <pre>{JSON.stringify(dsl, null, 2)}</pre>
             </>
           ) : (
             <div className="empty-state">
-              <strong>Пример asset-а</strong>
-              <span>Сундук с отдельными слоями body, lid, lock, highlights и stars.</span>
+              <strong>DSL появится тут</strong>
+              <span>Нажми «POST /api/plan-storyboard».</span>
             </div>
           )}
-
-          {generated ? (
-            <div className="output">
-              <h2>План анимации</h2>
-              <pre>{JSON.stringify(generated.plan, null, 2)}</pre>
-            </div>
+          {lottie ? (
+            <>
+              <h2>Lottie · {lottie.layers.length} слоёв · {(lottie.op / lottie.fr).toFixed(2)}s</h2>
+              <pre style={{ maxHeight: 320, overflow: "auto" }}>{JSON.stringify(lottie, null, 2)}</pre>
+            </>
           ) : null}
         </div>
       </section>

@@ -2,13 +2,14 @@
   "name": "lotion",
   "private": true,
   "version": "0.1.0",
-  "description": "AI-assisted Lottie feasibility and motion planning for Figma assets.",
+  "description": "Director Mode: SVG → storyboard → Lottie with Disney physics.",
   "packageManager": "npm@10.9.0",
   "scripts": {
     "dev": "npm --workspace @lotion/web run dev",
-    "build": "npm --workspace @lotion/web run build",
+    "dev:backend": "npm --workspace @lotion/web run dev",
     "build:plugin": "npm --workspace @lotion/figma-plugin run build",
-    "typecheck": "npm --workspace @lotion/web run typecheck && npm --workspace @lotion/figma-plugin run typecheck && npm --workspace @lotion/shared run typecheck"
+    "typecheck": "npm --workspace @lotion/web run typecheck && npm --workspace @lotion/figma-plugin run typecheck && npm --workspace @lotion/shared run typecheck",
+    "test": "npm --workspace @lotion/shared run test && npm --workspace @lotion/web run test"
   },
   "workspaces": [
     "apps/*",
@@ -19,6 +20,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "tsx": "^4.19.0",
     "typescript": "^5.5.0"
   }
 }
