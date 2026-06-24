@@ -101,11 +101,12 @@ function colorToHex(color, opacity = 1) {
 function paintColors(node, key) {
   const paints = node[key];
   if (!Array.isArray(paints)) return undefined;
-  const colors = paints.flatMap((paint) => {
+  const colors = [];
+  paints.forEach((paint) => {
     if (!paint || typeof paint !== "object") return [];
     if (paint.type !== "SOLID" || !paint.color) return [];
     if (paint.visible === false) return [];
-    return [colorToHex(paint.color, paint.opacity ?? 1)];
+    colors.push(colorToHex(paint.color, typeof paint.opacity === "number" ? paint.opacity : 1));
   });
   return colors.length ? colors : undefined;
 }
@@ -118,8 +119,8 @@ function numberProperty(node, key) {
 function serializeNode(node, rootBounds) {
   const bounds = "absoluteBoundingBox" in node ? node.absoluteBoundingBox : undefined;
   const children = "children" in node ? node.children.map((child) => serializeNode(child, rootBounds)) : undefined;
-  const rootX = rootBounds?.x ?? 0;
-  const rootY = rootBounds?.y ?? 0;
+  const rootX = rootBounds && typeof rootBounds.x === "number" ? rootBounds.x : 0;
+  const rootY = rootBounds && typeof rootBounds.y === "number" ? rootBounds.y : 0;
 
   return {
     id: node.id,

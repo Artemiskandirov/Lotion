@@ -802,18 +802,18 @@
       function lottiePreviewSrc(layer) {
         if (!layer || layer.ty !== 2 || typeof layer.refId !== "string") return "";
         const asset = ((lastLottie && lastLottie.assets) || []).map(asRecord).find((item) => item.id === layer.refId);
-        return typeof asset?.p === "string" ? asset.p : "";
+        return asset && typeof asset.p === "string" ? asset.p : "";
       }
 
       function shapePreviewStyle(layer) {
-        const shapeGroup = (Array.isArray(layer?.shapes) ? layer.shapes : []).map(asRecord)[0];
-        const items = Array.isArray(shapeGroup?.it) ? shapeGroup.it.map(asRecord) : [];
+        const shapeGroup = (Array.isArray(layer && layer.shapes) ? layer.shapes : []).map(asRecord)[0];
+        const items = Array.isArray(shapeGroup && shapeGroup.it) ? shapeGroup.it.map(asRecord) : [];
         const geometry = items.find((item) => item.ty === "rc" || item.ty === "el");
         const fill = items.find((item) => item.ty === "fl");
-        const size = numberArray(asRecord(asRecord(geometry).s).k) || [lastLottie?.w || 80, lastLottie?.h || 80];
+        const size = numberArray(asRecord(asRecord(geometry).s).k) || [(lastLottie && lastLottie.w) || 80, (lastLottie && lastLottie.h) || 80];
         const color = numberArray(asRecord(asRecord(fill).c).k) || [0.24, 0.42, 0.94, 1];
         const rgb = color.slice(0, 3).map((value) => Math.round(Math.max(0, Math.min(1, value)) * 255));
-        return `width:${Math.max(8, size[0])}px;height:${Math.max(8, size[1])}px;border-radius:${geometry?.ty === "el" ? "999px" : "12px"};background:rgb(${rgb.join(", ")});`;
+        return `width:${Math.max(8, size[0])}px;height:${Math.max(8, size[1])}px;border-radius:${geometry && geometry.ty === "el" ? "999px" : "12px"};background:rgb(${rgb.join(", ")});`;
       }
 
       function previewKeyframesFromLottie() {
