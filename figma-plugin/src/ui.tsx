@@ -1,9 +1,90 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import type { AssetIntent, AssetSnapshot, LottieDocument, StoryboardDSL } from "@lotion/shared";
+import type { AssetIntent, AssetSnapshot, Keyframe, LottieDocument, StoryboardDSL, Track } from "@lotion/shared";
 import "./ui.css";
 
 const defaultBackendUrl = "https://lotion-figma-plugin.vercel.app";
+const FRAME_COUNT = 7;
+
+function sampleScalar(
+  kfs: Keyframe[],
+  prop: "tx" | "ty" | "sx" | "sy" | "rot" | "op",
+  t: number,
+  fallback: number
+): number {
+  const filtered = kfs.filter((kf) => typeof (kf as Record<string, unknown>)[prop] === "number");
+  if (filtered.length === 0) return fallback;
+  if (t <= filtered[0].t) return (filtered[0] as Record<string, unknown>)[prop] as number;
+  if (t >= filtered[filtered.length - 1].t)
+    return (filtered[filtered.length - 1] as Record<string, unknown>)[prop] as number;
+  for (let i = 0; i < filtered.length - 1; i += 1) {
+    const a = filtered[i];
+    const b = filtered[i + 1];
+    if (t >= a.t && t <= b.t) {
+      const ratio = (t - a.t) / (b.t - a.t || 1);
+      const va = (a as Record<string, unknown>)[prop] as number;
+      const vb = (b as Record<string, unknown>)[prop] as number;
+      return va + (vb - va) * ratio;
+    }
+  }
+  return fallback;
+}
+
+function loadSvgImage(svg: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(e);
+    const encoded = btoa(unescape(encodeURIComponent(svg)));
+    img.src = `data:image/svg+xml;base64,${encoded}`;
+  });
+}
+
+async function renderStoryboardClientSide(asset: AssetSnapshot, dsl: StoryboardDSL): Promise<string[]> {
+  if (!asset.svg) return [];
+  const width = Math.max(1, Math.round(asset.width));
+  const height = Math.max(1, Math.round(asset.height));
+  const padding = Math.max(width, height) * 0.5;
+  const canvasW = Math.round(width + padding * 2);
+  const canvasH = Math.round(height + padding * 2);
+
+  let img: HTMLImageElement;
+  try {
+    img = await loadSvgImage(asset.svg);
+  } catch {
+    return [];
+  }
+
+  const track: Track | undefined = dsl.tracks[0];
+  const frames: string[] = [];
+  for (let i = 0; i < FRAME_COUNT; i += 1) {
+    const t = i / Math.max(1, FRAME_COUNT - 1);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) continue;
+    ctx.clearRect(0, 0, canvasW, canvasH);
+
+    if (track) {
+      const tx = sampleScalar(track.keyframes, "tx", t, 0);
+      const ty = sampleScalar(track.keyframes, "ty", t, 0);
+      const sx = sampleScalar(track.keyframes, "sx", t, 1);
+      const sy = sampleScalar(track.keyframes, "sy", t, 1);
+      const rot = sampleScalar(track.keyframes, "rot", t, 0);
+      const op = sampleScalar(track.keyframes, "op", t, 1);
+      ctx.globalAlpha = Math.max(0, Math.min(1, op));
+      ctx.translate(canvasW / 2 + tx, canvasH / 2 + ty);
+      ctx.rotate((rot * Math.PI) / 180);
+      ctx.scale(sx, sy);
+      ctx.drawImage(img, -width / 2, -height / 2, width, height);
+    } else {
+      ctx.drawImage(img, padding, padding, width, height);
+    }
+    frames.push(canvas.toDataURL("image/png"));
+  }
+  return frames;
+}
 
 type LogEntry = {
   id: number;
@@ -18,7 +99,6 @@ type StoryboardReady = {
   type: "storyboard-ready";
   dsl: StoryboardDSL;
   rationale: string;
-  frames: string[];
   asset: AssetSnapshot;
 };
 
@@ -80,10 +160,12 @@ function App() {
         setLoading(null);
         setDsl(message.dsl);
         setRationale(message.rationale);
-        setFrames(message.frames);
         setAsset(message.asset);
         setActiveFrame(0);
         setStep("storyboard");
+        void renderStoryboardClientSide(message.asset, message.dsl).then((rendered) => {
+          setFrames(rendered);
+        });
         return;
       }
       if (message.type === "lottie-ready") {
@@ -113,6 +195,7 @@ function App() {
   function planStoryboard() {
     setError("");
     setLoading("plan");
+    setFrames([]);
     parent.postMessage(
       { pluginMessage: { type: "plan-storyboard", intent } },
       "*"

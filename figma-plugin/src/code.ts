@@ -423,11 +423,8 @@ figma.ui.onmessage = async (message) => {
         await applyLayerOps(node, plan.layerOps);
       }
 
-      const frameCount = 7;
-      const frames = await renderStoryboardFrames(node, plan.dsl, frameCount);
-      log("info", "Storyboard frames rendered", { count: frames.length });
-
-      figma.ui.postMessage({ type: "storyboard-ready", dsl: plan.dsl, rationale: plan.rationale, frames, asset });
+      log("info", "Storyboard DSL ready", { tracks: plan.dsl.tracks.length });
+      figma.ui.postMessage({ type: "storyboard-ready", dsl: plan.dsl, rationale: plan.rationale, asset });
       return;
     }
 

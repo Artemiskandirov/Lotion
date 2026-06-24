@@ -187,113 +187,6 @@
     }
     return null;
   }
-  function snapshotNode(node) {
-    return {
-      id: node.id,
-      relativeTransform: "relativeTransform" in node ? cloneTransform(node.relativeTransform) : identityTransform(),
-      opacity: "opacity" in node ? node.opacity : void 0,
-      rotation: "rotation" in node ? node.rotation : void 0
-    };
-  }
-  function restoreNode(node, snapshot) {
-    if ("relativeTransform" in node) {
-      node.relativeTransform = cloneTransform(snapshot.relativeTransform);
-    }
-    if (typeof snapshot.opacity === "number" && "opacity" in node) {
-      node.opacity = snapshot.opacity;
-    }
-  }
-  function identityTransform() {
-    return [
-      [1, 0, 0],
-      [0, 1, 0]
-    ];
-  }
-  function cloneTransform(t) {
-    return [
-      [t[0][0], t[0][1], t[0][2]],
-      [t[1][0], t[1][1], t[1][2]]
-    ];
-  }
-  function sampleScalar(kfs, prop, t, fallback) {
-    const filtered = kfs.filter((kf) => typeof kf[prop] === "number");
-    if (filtered.length === 0) return fallback;
-    if (t <= filtered[0].t) return filtered[0][prop];
-    if (t >= filtered[filtered.length - 1].t) return filtered[filtered.length - 1][prop];
-    for (let i = 0; i < filtered.length - 1; i += 1) {
-      const a = filtered[i];
-      const b = filtered[i + 1];
-      if (t >= a.t && t <= b.t) {
-        const ratio = (t - a.t) / (b.t - a.t || 1);
-        const va = a[prop];
-        const vb = b[prop];
-        return va + (vb - va) * ratio;
-      }
-    }
-    return fallback;
-  }
-  function applyTrackAtTime(rootNode, track, t, originalSnapshot) {
-    const node = findNodeById(rootNode, track.layerRef);
-    if (!node) return;
-    const tx = sampleScalar(track.keyframes, "tx", t, 0);
-    const ty = sampleScalar(track.keyframes, "ty", t, 0);
-    const sx = sampleScalar(track.keyframes, "sx", t, 1);
-    const sy = sampleScalar(track.keyframes, "sy", t, 1);
-    const rot = sampleScalar(track.keyframes, "rot", t, 0);
-    const op = sampleScalar(track.keyframes, "op", t, 1);
-    if (!("relativeTransform" in node)) return;
-    const base = originalSnapshot.relativeTransform;
-    const radians = rot * Math.PI / 180;
-    const cos = Math.cos(radians);
-    const sin = Math.sin(radians);
-    const m00 = cos * sx;
-    const m01 = -sin * sy;
-    const m10 = sin * sx;
-    const m11 = cos * sy;
-    const transform = [
-      [m00, m01, base[0][2] + tx],
-      [m10, m11, base[1][2] + ty]
-    ];
-    node.relativeTransform = transform;
-    if ("opacity" in node) {
-      node.opacity = Math.max(0, Math.min(1, op));
-    }
-  }
-  async function renderStoryboardFrames(rootNode, dsl, frameCount) {
-    const snapshots = /* @__PURE__ */ new Map();
-    for (const track of dsl.tracks) {
-      const node = findNodeById(rootNode, track.layerRef);
-      if (node) snapshots.set(track.layerRef, snapshotNode(node));
-    }
-    const frames = [];
-    try {
-      for (let i = 0; i < frameCount; i += 1) {
-        const t = i / Math.max(1, frameCount - 1);
-        for (const track of dsl.tracks) {
-          const snap = snapshots.get(track.layerRef);
-          if (snap) applyTrackAtTime(rootNode, track, t, snap);
-        }
-        const bytes = await rootNode.exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 1 } });
-        frames.push(uint8ToBase64(bytes));
-      }
-    } finally {
-      for (const track of dsl.tracks) {
-        const node = findNodeById(rootNode, track.layerRef);
-        const snap = snapshots.get(track.layerRef);
-        if (node && snap) restoreNode(node, snap);
-      }
-    }
-    return frames;
-  }
-  function uint8ToBase64(bytes) {
-    let binary = "";
-    const chunkSize = 32768;
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      const chunk = bytes.subarray(i, i + chunkSize);
-      binary += String.fromCharCode.apply(null, Array.from(chunk));
-    }
-    return `data:image/png;base64,${btoa(binary)}`;
-  }
   async function applyLayerOps(rootNode, ops) {
     for (const op of ops) {
       try {
@@ -359,10 +252,8 @@
         if (plan.layerOps && plan.layerOps.length) {
           await applyLayerOps(node, plan.layerOps);
         }
-        const frameCount = 7;
-        const frames = await renderStoryboardFrames(node, plan.dsl, frameCount);
-        log("info", "Storyboard frames rendered", { count: frames.length });
-        figma.ui.postMessage({ type: "storyboard-ready", dsl: plan.dsl, rationale: plan.rationale, frames, asset });
+        log("info", "Storyboard DSL ready", { tracks: plan.dsl.tracks.length });
+        figma.ui.postMessage({ type: "storyboard-ready", dsl: plan.dsl, rationale: plan.rationale, asset });
         return;
       }
       if (type === "commit-lottie") {
