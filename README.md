@@ -1,108 +1,105 @@
 # Lotion
 
-Lotion — Figma-плагин и backend для честной проверки: можно ли выбранный asset хорошо анимировать в Lottie.
-
-Идея продукта: не обещать магию одной кнопкой, а сначала объяснять дизайнеру, что получится, что не получится и какие слои нужно подготовить.
-
-## Как это работает
-
-```text
-Figma plugin
-  -> выбранный объект и структура слоёв
-  -> Vercel / Next.js API
-  -> feasibility check
-  -> выбор motion-сценария
-  -> motion plan
-  -> Lottie JSON
-```
-
-Figma-плагин отвечает только за интерфейс и доступ к выделенным слоям. Backend отвечает за анализ, секреты, AI-логику, генерацию плана и Lottie.
+Director Mode для Figma: выделил иконку → описал движение словами → одобрил
+раскадровку из 7 PNG-кадров → получил Lottie с spring-физикой и принципами
+Disney. Без подписки и без обязательного OpenAI ключа: встроенный
+детерминированный планнер уже даёт разнообразные анимации по prompt'у; AI
+добавляется опционально и улучшает качество.
 
 ## Структура
 
 ```text
-apps/
-  figma-plugin/      # Vercel / Next backend и preview
-figma-plugin/        # настоящий Figma plugin
-packages/
-  shared/            # общие типы, feasibility, motion recipes, Lottie compiler
+figma-plugin/      Figma plugin (Vite + React + esbuild)
+apps/figma-plugin/ Next.js backend: /api/plan-storyboard, /api/compile-lottie
+packages/shared/   DSL, валидаторы, Lottie-компилятор, Disney-физика
+packages/mcp-physics/ MCP-сервер с физикой (для Claude-сессий, не нужен для работы плагина)
 ```
 
-## MVP
+## Запуск локально
 
-Первая версия фокусируется на UI/game asset-ах:
+1. Установить зависимости (workspace):
 
-- монета;
-- звезда;
-- замок;
-- подарок;
-- сундук;
-- бейдж;
-- кнопка;
-- галочка;
-- предупреждение;
-- progress bar.
+   ```bash
+   npm install
+   ```
 
-## API
+2. Поднять backend (Next.js, порт 3000):
 
-`POST /api/analyze-asset` — анализ структуры выделенного объекта.
+   ```bash
+   npm run dev:backend
+   ```
 
-`POST /api/feasibility-check` — score, уровень риска, ограничения, рекомендации и действия.
+3. Собрать плагин (`figma-plugin/dist/`):
 
-`POST /api/suggest-motions` — подходящие motion-сценарии.
+   ```bash
+   npm run build:plugin
+   ```
 
-`POST /api/generate-plan` — структурированный motion plan.
+4. В Figma desktop: **Plugins → Development → Import plugin from manifest…** —
+   выбрать `figma-plugin/manifest.json`.
 
-`POST /api/generate-lottie` — motion plan + Lottie JSON.
+5. В плагине открыть вкладку **Backend** и вписать `http://localhost:3000`,
+   нажать **Сохранить**. URL хранится в `figma.clientStorage`, переключать
+   между prod и dev можно в любой момент.
 
-`POST /api/validate-lottie` — базовая проверка Lottie JSON.
+## Использование
 
-## Локально
+1. Выдели один объект/фрейм в Figma.
+2. Введи prompt (RU или EN: «подпрыгни», «pulse twice», «rotate slowly»,
+   «крышка открывается», «pop and shake»).
+3. Поставь длительность 1–5 секунд.
+4. Нажми **Сгенерировать раскадровку** — плагин применит план к слоям,
+   экспортирует 7 PNG-кадров, покажет loop-превью.
+5. **Одобрить → Lottie** — backend соберёт Lottie JSON, в плагине появится
+   кнопка **Скачать .json**. Файл играется в `https://lottiefiles.com/preview`.
+
+## OpenAI (опционально)
+
+Без ключа плагин использует встроенный детерминированный планнер
+(`apps/figma-plugin/lib/deterministic-planner.ts`), который разбирает prompt по
+ключевым словам (bounce, pulse, shake, rotate, fade, pop, drift, swing, wave,
+drop, zoom, wobble) и собирает разные DSL под каждый запрос.
+
+С ключом:
 
 ```bash
-npm install
-npm run dev
+cp apps/figma-plugin/.env.example apps/figma-plugin/.env.local
+# заполнить OPENAI_API_KEY=
+# опционально OPENAI_MODEL=gpt-5
+npm run dev:backend
 ```
 
-Сборка Figma-плагина:
+AI получает детерминированный план как hint и улучшает его (точнее
+stiffness/damping, secondary motion, morph). При любой ошибке backend молча
+возвращает детерминированный результат.
 
-```bash
-npm run build:plugin
+## Скрипты
+
+| Команда | Что делает |
+|---|---|
+| `npm install` | ставит зависимости всех workspace |
+| `npm run dev:backend` | Next.js на `http://localhost:3000` |
+| `npm run build:plugin` | сборка `figma-plugin/dist/{code.js,index.html}` |
+| `npm run typecheck` | tsc по всем пакетам |
+| `npm test -w packages/shared` | юнит-тесты физики и компилятора |
+| `npm test -w apps/figma-plugin` | тесты детерминированного планнера |
+
+## DSL
+
+См. `packages/shared/src/dsl/schema.ts`. Кратко:
+
+```ts
+type StoryboardDSL = {
+  durationMs: number;
+  fps: 30 | 60;
+  loop: true;
+  layerOps?: LayerOp[];
+  tracks: Track[];
+  rationale?: string;
+};
 ```
 
-Для загрузки в Figma используй:
-
-```text
-figma-plugin/manifest.json
-```
-
-## Анализ слоёв Figma
-
-Плагин анализирует только выделенный объект, а не весь документ. Он отправляет на backend:
-
-- дерево выделенного node;
-- имена слоёв;
-- типы node;
-- размеры и позицию из `absoluteBoundingBox`;
-- visible state;
-- краткое описание fill/stroke;
-- SVG через `exportAsync({ format: "SVG_STRING" })`;
-- пользовательский контекст.
-
-Имена слоёв важны: `lid`, `body`, `lock`, `eyes`, `star`, `highlight` помогают понять, какие части можно безопасно двигать.
-
-## OpenAI
-
-Плагин не вызывает OpenAI напрямую. Ключ хранится только на backend.
-
-В Vercel нужна одна переменная:
-
-```text
-OPENAI_API_KEY=your_openai_api_key
-```
-
-Модель по умолчанию зафиксирована в backend-коде:
-
-```text
-gpt-5.5
-```
+`Track` — массив `Keyframe { t, tx?, ty?, sx?, sy?, rot?, op?, morphTo?, ease? }`.
+`Easing` — `spring | anticipation | overshoot | cubic | linear`. Spring
+разворачивается в bezier-keyframes детерминированной формулой в
+`packages/shared/src/physics/disney.ts`.

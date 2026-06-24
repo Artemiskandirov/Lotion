@@ -1,6 +1,6 @@
 export const openAIConfig = {
   apiKey: process.env.OPENAI_API_KEY,
-  model: "gpt-5.5"
+  model: process.env.OPENAI_MODEL ?? "gpt-5"
 };
 
 export function isOpenAIConfigured(): boolean {
