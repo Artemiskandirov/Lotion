@@ -433,6 +433,47 @@ ul {
   min-height: 180px;
 }
 
+.frames-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.frame-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.frame-thumb.active {
+  border-color: #0071e3;
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.18);
+}
+
+.frame-thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.frame-thumb span {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  color: #6e6e73;
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  padding: 1px 5px;
+  font-size: 9px;
+}
+
 .logs-panel {
   display: grid;
   grid-template-rows: auto 1fr;

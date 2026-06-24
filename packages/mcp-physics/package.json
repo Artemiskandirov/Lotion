@@ -1,0 +1,20 @@
+{
+  "name": "@lotion/mcp-physics",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "lotion-mcp-physics": "./src/server.ts"
+  },
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@lotion/shared": "file:../shared"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

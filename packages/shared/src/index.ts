@@ -21,4 +21,30 @@ export { runFeasibilityCheck, suggestScenarioIds } from "./motion-schema/feasibi
 export { generateMotionPlan } from "./motion-schema/planner";
 export { motionRecipes, getRecipe } from "./motion-recipes/recipes";
 export { compilePlanToLottie } from "./lottie/compile";
+export { compileFromDSL } from "./lottie/dsl-compile";
+export { svgPathToLottieShape } from "./lottie/svg-path";
+export type { LottieBezier } from "./lottie/svg-path";
 export { normalizeAssetRequest } from "./validators/asset";
+
+export type {
+  Easing,
+  Keyframe,
+  LayerOp,
+  SecondaryMotion,
+  StoryboardDSL,
+  StoryboardPlanResult,
+  Track
+} from "./dsl/schema";
+export { storyboardJSONSchema, validateStoryboardDSL } from "./dsl/schema";
+
+export {
+  applyAnticipation,
+  applyDisneyPrinciples,
+  applyOvershoot,
+  applySecondary,
+  bezierForEasing,
+  deriveSecondaryTrack,
+  expandEasing,
+  sampleScalarAt,
+  springSamples
+} from "./physics/disney";
