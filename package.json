@@ -5,11 +5,10 @@
   "description": "Director Mode: SVG → storyboard → Lottie with Disney physics.",
   "packageManager": "npm@10.9.0",
   "scripts": {
-    "dev": "npm --workspace @lotion/web run dev",
-    "dev:backend": "npm --workspace @lotion/web run dev",
+    "dev:backend": "npm --workspace @lotion/backend run dev",
     "build:plugin": "npm --workspace @lotion/figma-plugin run build",
-    "typecheck": "npm --workspace @lotion/web run typecheck && npm --workspace @lotion/figma-plugin run typecheck && npm --workspace @lotion/shared run typecheck",
-    "test": "npm --workspace @lotion/shared run test && npm --workspace @lotion/web run test"
+    "typecheck": "npm --workspace @lotion/backend run typecheck && npm --workspace @lotion/figma-plugin run typecheck && npm --workspace @lotion/shared run typecheck",
+    "test": "npm --workspace @lotion/shared run test && npm --workspace @lotion/backend run test"
   },
   "workspaces": [
     "apps/*",
